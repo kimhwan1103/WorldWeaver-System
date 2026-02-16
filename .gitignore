@@ -1,0 +1,19 @@
+# Environment variables
+.env
+GOOGLE_API_KEY
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store

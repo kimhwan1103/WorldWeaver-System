@@ -1,0 +1,20 @@
+- Rift Fields: Each battlefield is a “rift” dominated by the logic of one myth, with unique maps, wave patterns, and environmental rules. Beneath every map lies the divine vein network, where Guardians must build towers and channel energy.
+- Constellation Resonance: Towers, heroes, and relics share constellation tags (e.g., Leo, Scorpio, Serpent, Dragon). When aligned, resonance bonuses unlock cross-myth synergies. For example, Leo resonance unites the Nemean Lion tower, Norse Draupnir archers, and Eastern White Tiger wards into a critical-hit roar combo.
+- Mythic Lineage Synergy: Building units from the same myth grants doctrine bonuses. Greek sets grant petrification resistance piercing, Norse sets add frost slow stacking, Egyptian sets grant execution thresholds (Anubis’s scales), etc.
+- Relics, Rituals, Inscriptions:
+    - Relics: Equip towers with mythic artifacts (Mjölnir fragments = chain lightning, Eye of Horus = scouting vision, Azure Dragon Scale = penetration boost).
+    - Rituals: Map-wide spells (Ragnarök’s Winter = global blizzard, Phoenix Rite = revive front lines).
+    - Inscriptions: Permanent terrain modifiers (Cliffs of Styx = seal enemies on death, Bifröst Pillars = increase projectile speed/range).
+- Corruption & Seal Gauge: Each round raises corruption, adding elite modifiers, but also fills the Seal gauge. The Seal can weaken boss patterns or redirect enemy paths.
+- Mythic Alchemy (Fusion): Combine relics from different myths into “Equivalence Relics.” Example: Hermes’s Winged Sandals + Anubis’s Ujat Eye = Soulchaser Step (bonus against fleeing spirit-type bosses, instant redeployment).
+- Heroic Aspects: Heroes embody multiple aspects of their myth. Athena may appear as Strategist / Spear Commander / Shield of Protection; Thor as Thunder Thrower / Magnetic Storm / Chariot of the Skies. Choosing aspects changes tower orders and resonance priorities.
+- Myth-Terrain Synchronization: Tiles respond to the myth’s logic. Styx tiles reverse healing, Bifröst tiles split projectiles, Kunlun ridges grant piercing instead of range, Tír na nÓg forests periodically uncloak hidden enemies.
+- Wave Skeleton:
+    - Normal waves (training)
+    - Elite waves (trait testing)
+    - Legendary waves (themed mechanics, e.g., Medusa’s Gaze slowing towers, Fenrir’s Chains enraging slowed enemies)
+    - Seal waves (pre-boss segments)
+    - Boss waves (full ritual & inscription play).
+- Chronicle Meta Progression: Clearing rifts yields Chronicle Fragments and Constellation Sigils, expanding the constellation tree (more resonance slots, divine vein detection, ritual cooldown reduction). Combined fragments unlock Hybrid Rift Fields where two myth rules overlap for extreme risk-reward.
+- Risk–Reward Lever: Players may invoke “Corruption Rituals” to empower enemies with shields, invisibility, or splitting—but in return gain legendary relic materials. Doing so disables Seal-based boss weakening, forcing pure skill builds.
+- Balance Enforcer (Watcher of the Flow): Over-reliance on a single myth triggers global interference: resonance caps, reversed constellation effects, or temporary sealing of synergies. This enforces the lore that no single pantheon can dominate the world.
