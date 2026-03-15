@@ -9,7 +9,11 @@ class Choice(BaseModel):
     next_node_prompt: str = Field(description="다음 씬 생성을 위한 프롬프트")
     choice_type: str = Field(
         default="story",
-        description="선택지 타입: story(일반 진행), dialogue(NPC 대화)",
+        description="선택지 타입: story(일반 진행), dialogue(NPC 대화), combat(전투 조우)",
+    )
+    enemy_name: str | None = Field(
+        default=None,
+        description="전투 대상 적 이름 (choice_type이 combat일 때)",
     )
     npc_name: str | None = Field(
         default=None,

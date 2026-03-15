@@ -2,6 +2,7 @@ from pathlib import Path
 
 import networkx as nx
 
+from worldweaver.combat import CombatEngine, EnemyRegistry
 from worldweaver.config import GRAPH_OUTPUT, MAX_SCENES
 from worldweaver.content_filter import (
     TopicFilter,
@@ -41,6 +42,9 @@ class GameSession:
         # NPC 매니저 초기화
         self.npc_manager = NPCManager(theme)
         self._current_stage = "default"  # 현재 스테이지 추적
+
+        # 전투 시스템 초기화
+        self.enemy_registry = EnemyRegistry(theme)
 
     def _load_topic_filter(self, theme: dict) -> TopicFilter:
         """테마의 지식 그래프를 로드하여 TopicFilter를 생성."""
@@ -107,8 +111,13 @@ class GameSession:
             # NPC 대화 선택지인 경우 대화 모드 진입
             if selected.get("choice_type") == "dialogue" and selected.get("npc_name"):
                 self._run_npc_dialogue(selected["npc_name"])
-                # 대화 종료 후 이전 선택지로 복귀
                 prompt = last_choices[0]["next_node_prompt"] if last_choices else prompt
+            # 전투 선택지인 경우 전투 모드 진입
+            elif selected.get("choice_type") == "combat" and selected.get("enemy_name"):
+                combat_result = self._run_combat(selected["enemy_name"], current_id)
+                if combat_result:
+                    current_id = combat_result
+                prompt = selected["next_node_prompt"]
             else:
                 prompt = selected["next_node_prompt"]
 
@@ -145,18 +154,205 @@ class GameSession:
 
             self._print_choices(choices)
 
-            # 자동 모드에서는 dialogue 타입 선택지를 건너뛰고 story 타입만 선택
-            story_choices = [c for c in choices if c.get("choice_type", "story") == "story"]
-            if not story_choices:
-                story_choices = choices  # 모든 선택지가 dialogue면 그냥 선택
+            # 자동 모드에서는 dialogue 타입 선택지를 건너뛰고 story/combat 타입만 선택
+            action_choices = [c for c in choices if c.get("choice_type", "story") in ("story", "combat")]
+            if not action_choices:
+                action_choices = choices
+            story_choices = action_choices
 
             personas = self.theme.get("personas", {})
             selected = choose_by_persona(story_choices, persona, personas)
             print(f"\n(시스템: 페르소나 선택 -> '{selected['text']}')")
 
+            # 자동 모드 전투 처리
+            if selected.get("choice_type") == "combat" and selected.get("enemy_name"):
+                combat_result = self._run_combat_auto(selected["enemy_name"], current_id)
+                if combat_result:
+                    current_id = combat_result
+
             prompt = selected["next_node_prompt"]
 
             self.graph.save(GRAPH_OUTPUT)
+
+    # ── 전투 모드 ──
+
+    def _run_combat(self, enemy_name: str, parent_id: str) -> str | None:
+        """인터랙티브 전투 모드. 전투 라운드를 그래프에 기록."""
+        template = self.enemy_registry.get_enemy(enemy_name)
+        if not template:
+            print(f"(시스템: '{enemy_name}' 적을 찾을 수 없습니다)")
+            return None
+
+        engine = CombatEngine.from_template(template, self.world_state)
+
+        print(f"\n{'='*50}")
+        print(f"  ⚔ 전투 시작: {template.name}")
+        if template.description:
+            print(f"  {template.description}")
+        print(f"\n  {engine.player.name} {engine.player.hp_bar}")
+        print(f"  {engine.enemy.name}  {engine.enemy.hp_bar}")
+        print(f"{'='*50}")
+
+        # 전투 진입 노드
+        combat_entry = {
+            "title": f"전투: {template.name}",
+            "description": f"{template.name}과(와)의 전투가 시작되었다. {template.description}",
+        }
+        current_combat_id = self.graph.add_scene(
+            combat_entry, parent_id, "전투 돌입", node_type="combat"
+        )
+
+        fled = False
+        while not engine.is_over:
+            print(f"\n--- 행동 선택 ---")
+            print(f"  1. ⚔ 공격")
+            print(f"  2. 🛡 방어")
+            print(f"  3. 💥 강공격 (높은 데미지, 실패 확률)")
+            if engine._player_items:
+                print(f"  4. 🧪 아이템 사용 ({', '.join(engine._player_items[:3])})")
+            print(f"  5. 🏃 도주")
+
+            user_input = input("\n행동 선택 (숫자): ").strip()
+
+            action_map = {"1": "attack", "2": "defend", "3": "skill", "4": "item", "5": "flee"}
+            action = action_map.get(user_input, "attack")
+
+            item_name = ""
+            if action == "item":
+                if engine._player_items:
+                    item_name = engine._player_items[0]
+                else:
+                    print("사용할 아이템이 없습니다.")
+                    continue
+
+            result = engine.execute_round(action, item_name)
+            print(f"\n{result.combat_log}")
+
+            # 라운드를 그래프에 기록
+            current_combat_id = self.graph.add_combat_round(
+                result.combat_log, current_combat_id, result.round_number
+            )
+
+            # 도주 성공 체크
+            if action == "flee" and result.player_action.success:
+                fled = True
+                break
+
+        combat_result = engine.get_result(fled=fled)
+        return self._finalize_combat(combat_result, template, current_combat_id)
+
+    def _run_combat_auto(self, enemy_name: str, parent_id: str) -> str | None:
+        """자동 모드 전투. AI가 행동을 선택."""
+        template = self.enemy_registry.get_enemy(enemy_name)
+        if not template:
+            return None
+
+        engine = CombatEngine.from_template(template, self.world_state)
+
+        print(f"\n⚔ 자동 전투: {template.name}")
+        print(f"  {engine.player.name} {engine.player.hp_bar}")
+        print(f"  {engine.enemy.name}  {engine.enemy.hp_bar}")
+
+        combat_entry = {
+            "title": f"전투: {template.name}",
+            "description": f"{template.name}과(와)의 전투가 시작되었다.",
+        }
+        current_combat_id = self.graph.add_scene(
+            combat_entry, parent_id, "전투 돌입", node_type="combat"
+        )
+
+        import random
+        fled = False
+        while not engine.is_over:
+            # 자동 행동 결정
+            hp_ratio = engine.player.hp / engine.player.max_hp
+            if hp_ratio < 0.2:
+                action = random.choice(["flee", "item", "defend"])
+            elif hp_ratio < 0.5:
+                action = random.choice(["attack", "defend", "skill"])
+            else:
+                action = random.choice(["attack", "attack", "skill"])
+
+            item_name = engine._player_items[0] if action == "item" and engine._player_items else ""
+            if action == "item" and not item_name:
+                action = "defend"
+
+            result = engine.execute_round(action, item_name)
+            print(f"  라운드 {result.round_number}: "
+                  f"{result.player_action.detail} | {result.enemy_action.detail}")
+
+            current_combat_id = self.graph.add_combat_round(
+                result.combat_log, current_combat_id, result.round_number
+            )
+
+            if action == "flee" and result.player_action.success:
+                fled = True
+                break
+
+        combat_result = engine.get_result(fled=fled)
+        return self._finalize_combat(combat_result, template, current_combat_id)
+
+    def _finalize_combat(self, combat_result, template, current_combat_id: str) -> str:
+        """전투 종료 처리: 결과 출력, 보상/페널티, 그래프/메모리 기록."""
+        outcome_text = {"victory": "승리!", "defeat": "패배...", "flee": "도주!"}
+        print(f"\n{'='*50}")
+        print(f"  ⚔ 전투 종료: {outcome_text.get(combat_result.outcome, '')}")
+        print(f"  총 {len(combat_result.rounds)}라운드")
+        print(f"  가한 피해: {combat_result.total_damage_dealt} | 받은 피해: {combat_result.total_damage_taken}")
+
+        if combat_result.outcome == "victory":
+            # 적 처치 → 엔티티 상태 반영
+            self.world_state.entities[template.name] = "처치됨"
+
+            # 전리품
+            if template.loot:
+                combat_result.loot = template.loot
+                for item in template.loot:
+                    self.world_state.collections.setdefault("inventory", []).append(item)
+                print(f"  획득: {', '.join(template.loot)}")
+
+            # HP 반영 (전투 후 잔여 HP 비율을 게이지에 반영)
+            if "health" in self.world_state.gauges:
+                # 승리 시 체력 일부 회복
+                self.world_state.gauges["health"] = min(1.0, self.world_state.gauges["health"] + 0.1)
+
+        elif combat_result.outcome == "defeat":
+            # 패배 시 타락 게이지 상승
+            if "corruption" in self.world_state.gauges:
+                self.world_state.gauges["corruption"] = min(
+                    1.0, self.world_state.gauges["corruption"] + 0.15
+                )
+            if "health" in self.world_state.gauges:
+                self.world_state.gauges["health"] = max(0.1, self.world_state.gauges["health"] - 0.3)
+            print("  타락의 기운이 강해집니다...")
+
+        elif combat_result.outcome == "flee":
+            # 도주 시 소량 페널티
+            if "health" in self.world_state.gauges:
+                self.world_state.gauges["health"] = max(0.1, self.world_state.gauges["health"] - 0.1)
+
+        print(f"{'='*50}")
+        print(self.world_state.to_summary_string())
+
+        # 그래프에 전투 결과 노드 기록
+        result_id = self.graph.add_combat_result(
+            combat_result.to_graph_summary(),
+            current_combat_id,
+            combat_result.outcome,
+        )
+
+        # RAG 메모리에 전투 기록 저장
+        memory_text = combat_result.to_graph_summary()
+        clean = sanitize_for_memory(memory_text)
+        self.memory.add_memory(clean)
+
+        # 해당 스테이지 NPC들에게 전투 사건 기록
+        self.npc_manager.record_scene_event(
+            f"[전투] {memory_text}",
+            self._current_stage,
+        )
+
+        return result_id
 
     # ── NPC 대화 모드 ──
 
@@ -433,7 +629,8 @@ class GameSession:
             self._current_stage = detected_stage
             print(f"(시스템: 스테이지 변경 → {self._current_stage})")
 
-        # 해당 스테이지의 NPC들에게 사건 기록
+        # NPC 기억 마모 + 사건 기록
+        self.npc_manager.advance_all_scenes()
         self.npc_manager.record_scene_event(
             f"[씬: {node_data['title']}] {node_data['description'][:200]}",
             self._current_stage,

@@ -1,10 +1,25 @@
+import re
+
+from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import PromptTemplate
-from langchain_core.runnables import RunnableSequence
+from langchain_core.runnables import RunnableLambda, RunnableSequence
 
 from worldweaver.llm_factory import create_llm
 from worldweaver.models import NPCDialogueResponse, StoryNode
 from worldweaver.prompt_loader import get_story_template, load_prompt
+
+# Qwen3 등 thinking 모델이 출력하는 <think>...</think> 블록을 제거
+_THINK_PATTERN = re.compile(r"<think>.*?</think>\s*", re.DOTALL)
+
+
+def _strip_think_block(message: AIMessage) -> AIMessage:
+    """LLM 응답에서 <think> 블록을 제거."""
+    cleaned = _THINK_PATTERN.sub("", message.content).strip()
+    return AIMessage(content=cleaned)
+
+
+strip_think = RunnableLambda(_strip_think_block)
 
 
 def build_story_chain() -> RunnableSequence:
@@ -29,6 +44,7 @@ def build_story_chain() -> RunnableSequence:
         }
         | prompt
         | create_llm()
+        | strip_think
         | parser
     )
 
@@ -55,6 +71,7 @@ def build_npc_dialogue_chain() -> RunnableSequence:
         }
         | prompt
         | create_llm()
+        | strip_think
         | parser
     )
 

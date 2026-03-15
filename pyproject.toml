@@ -3,7 +3,7 @@ name = "worldweaver-system"
 version = "0.1.0"
 description = "AI 기반 신화 테마 게임 생성 시스템"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
     "langchain>=0.3",
     "langchain-groq>=0.2",
@@ -14,4 +14,10 @@ dependencies = [
     "networkx>=3.4",
     "python-dotenv>=1.0",
     "pydantic>=2.0",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+    "websockets>=14.0",
 ]
+
+[tool.setuptools.packages.find]
+include = ["worldweaver*"]

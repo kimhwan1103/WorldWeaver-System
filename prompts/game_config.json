@@ -2,7 +2,7 @@
   "description": "시스템 공통 설정 (테마 독립적)",
   "llm": {
     "provider": "groq",
-    "model": "llama-3.1-8b-instant",
+    "model": "qwen/qwen3-32b",
     "embedding_provider": "google",
     "embedding_model": "models/gemini-embedding-001"
   },

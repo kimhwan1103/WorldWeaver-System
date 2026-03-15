@@ -24,15 +24,48 @@ class StoryGraph:
         self._graph.add_node(node_id, title="시작", prompt=prompt)
         return node_id
 
-    def add_scene(self, node_data: dict, parent_id: str, choice_text: str) -> str:
-        """씬 노드를 추가하고 부모와 엣지로 연결. 생성된 노드 ID를 반환."""
+    def add_scene(self, node_data: dict, parent_id: str, choice_text: str,
+                  node_type: str = "story") -> str:
+        """씬 노드를 추가하고 부모와 엣지로 연결. 생성된 노드 ID를 반환.
+
+        node_type: "story" (일반 씬), "combat" (전투), "dialogue" (NPC 대화)
+        """
         node_id = f"{node_data['title']}_{uuid.uuid4().hex[:6]}"
         flat = self._flatten(node_data)
+        flat["node_type"] = node_type
         self._graph.add_node(node_id, **flat)
 
         if parent_id != node_id:
             self._graph.add_edge(parent_id, node_id, choice_text=choice_text)
 
+        return node_id
+
+    def add_combat_round(self, combat_summary: str, parent_id: str,
+                         round_number: int) -> str:
+        """전투 라운드를 그래프 노드로 기록."""
+        node_id = f"combat_r{round_number}_{uuid.uuid4().hex[:6]}"
+        self._graph.add_node(
+            node_id,
+            title=f"전투 라운드 {round_number}",
+            description=combat_summary,
+            node_type="combat",
+        )
+        self._graph.add_edge(parent_id, node_id, choice_text=f"라운드 {round_number}")
+        return node_id
+
+    def add_combat_result(self, result_summary: str, parent_id: str,
+                          outcome: str) -> str:
+        """전투 결과를 그래프 노드로 기록."""
+        outcome_text = {"victory": "승리", "defeat": "패배", "flee": "도주"}
+        title = f"전투 결과: {outcome_text.get(outcome, outcome)}"
+        node_id = f"{title}_{uuid.uuid4().hex[:6]}"
+        self._graph.add_node(
+            node_id,
+            title=title,
+            description=result_summary,
+            node_type="combat",
+        )
+        self._graph.add_edge(parent_id, node_id, choice_text="전투 종료")
         return node_id
 
     def add_future_choices(self, parent_id: str, choices: list[dict]):
@@ -81,6 +114,22 @@ class StoryGraph:
             node = self._graph.nodes[node_id]
             summaries.append({
                 "title": node.get("title", node_id),
+                "description": node.get("description", "")[:200],
+            })
+        return summaries
+
+    def get_recent_combat_summary(self, count: int = 3) -> list[dict]:
+        """최근 N개 전투 결과 노드의 요약."""
+        combat_nodes = [
+            n for n in self._graph.nodes
+            if self._graph.nodes[n].get("node_type") == "combat"
+            and "전투 결과" in self._graph.nodes[n].get("title", "")
+        ]
+        summaries = []
+        for node_id in combat_nodes[-count:]:
+            node = self._graph.nodes[node_id]
+            summaries.append({
+                "title": node.get("title", ""),
                 "description": node.get("description", "")[:200],
             })
         return summaries

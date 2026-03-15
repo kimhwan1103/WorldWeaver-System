@@ -70,6 +70,20 @@ SCHEMA_INSTRUCTIONS = """{
         }
       ]
     }
+  ],
+  "enemies": [
+    {
+      "name": "string (적 이름, 한글)",
+      "hp": 50,
+      "attack": 10,
+      "defense": 3,
+      "description": "string (적 묘사 1-2문장, 한글)",
+      "abilities": [
+        {"name": "string (스킬 이름)", "damage": 15, "chance": 0.2}
+      ],
+      "loot": ["string (드랍 아이템 이름)"],
+      "stage": "string (출현 스테이지/장소)"
+    }
   ]
 }"""
 
@@ -346,8 +360,23 @@ def _validate_theme(data: dict):
             print(f"(경고: 권장 컬렉션 '{col_name}' 누락 → 자동 추가)")
             collections[col_name] = default_val
 
+    # health 게이지 자동 추가 (전투 시스템용)
+    gauges = schema.get("gauges", {})
+    if "health" not in gauges:
+        print("(경고: 'health' 게이지 누락 → 전투 시스템용 자동 추가)")
+        gauges["health"] = {
+            "label": "생명력",
+            "description": "전투에서 데미지를 받으면 감소",
+            "min": 0.0,
+            "max": 1.0,
+            "default": 1.0,
+        }
+
     # NPC 프로필 검증 및 자동 보완
     _validate_npc_profiles(data)
+
+    # 적 정의 검증 및 자동 보완
+    _validate_enemies(data)
 
 
 def _validate_npc_profiles(data: dict):
@@ -417,3 +446,63 @@ def _validate_npc_profiles(data: dict):
 
     data["npc_profiles"] = valid_profiles
     print(f"NPC 프로필 검증 완료: {len(valid_profiles)}명")
+
+
+def _validate_enemies(data: dict):
+    """적 정의 목록을 검증하고 누락 필드를 자동 보완."""
+    enemies = data.get("enemies", [])
+
+    if not enemies:
+        print("(경고: 'enemies' 누락 → 빈 목록으로 설정)")
+        data["enemies"] = []
+        return
+
+    if not isinstance(enemies, list):
+        print("(경고: 'enemies' 형식 오류 → 빈 목록으로 초기화)")
+        data["enemies"] = []
+        return
+
+    valid_enemies = []
+    for i, enemy in enumerate(enemies):
+        if not isinstance(enemy, dict):
+            continue
+
+        if "name" not in enemy or not enemy["name"]:
+            print(f"(경고: 적 #{i + 1} 이름 없음 → 건너뜀)")
+            continue
+
+        name = enemy["name"]
+
+        # 스탯 기본값 및 범위 보정
+        enemy["hp"] = max(10, min(200, int(enemy.get("hp", 50))))
+        enemy["attack"] = max(1, min(30, int(enemy.get("attack", 8))))
+        enemy["defense"] = max(0, min(15, int(enemy.get("defense", 3))))
+
+        if "description" not in enemy:
+            enemy["description"] = ""
+
+        if "stage" not in enemy or not enemy["stage"]:
+            enemy["stage"] = "default"
+
+        # abilities 검증
+        abilities = enemy.get("abilities", [])
+        if not isinstance(abilities, list):
+            enemy["abilities"] = []
+        else:
+            valid_abilities = []
+            for a in abilities:
+                if isinstance(a, dict) and "name" in a:
+                    a["damage"] = max(1, int(a.get("damage", enemy["attack"])))
+                    a["chance"] = max(0.05, min(0.5, float(a.get("chance", 0.2))))
+                    valid_abilities.append(a)
+            enemy["abilities"] = valid_abilities
+
+        # loot 검증
+        loot = enemy.get("loot", [])
+        if not isinstance(loot, list):
+            enemy["loot"] = []
+
+        valid_enemies.append(enemy)
+
+    data["enemies"] = valid_enemies
+    print(f"적 정의 검증 완료: {len(valid_enemies)}종")

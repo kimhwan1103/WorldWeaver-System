@@ -22,6 +22,26 @@ import networkx as nx
 
 MEMORY_TYPES = {"dialogue", "event", "emotion", "quest", "observation"}
 
+# 스테이지 격리 대상: 이 타입만 스테이지가 달라도 기록/조회 차단
+_STAGE_ISOLATED_TYPES = {"event", "observation"}
+
+# pruning 보호 대상: 이 타입은 자동 마모되지 않음 (수동 망각만 가능)
+_PRUNING_PROTECTED_TYPES = {"quest"}
+
+# 기억 타입별 기본 수명 (씬 수 기준). 이 씬 수가 지나면 마모 대상이 됨
+_MEMORY_LIFESPAN = {
+    "dialogue": 15,     # 대화는 비교적 오래 기억
+    "event": 8,         # 사건은 중간
+    "observation": 5,   # 관찰은 빨리 잊음
+    "emotion": 20,      # 감정은 오래 남음
+    "quest": -1,        # 퀘스트는 마모 안 됨 (-1 = 영구)
+}
+
+# 마모된 기억의 상태
+MEMORY_STATE_ACTIVE = "active"      # 정상
+MEMORY_STATE_FADED = "faded"        # 흐릿함 (조회 시 축약)
+MEMORY_STATE_FORGOTTEN = "forgotten"  # 잊혀짐 (조회 안 됨, 복원 가능)
+
 
 @dataclass
 class NPCProfile:
@@ -48,6 +68,7 @@ class NPCMemoryGraph:
         self._graph = nx.DiGraph()
         self._disposition: float = profile.initial_disposition  # 현재 호감도
         self._current_stage: str = profile.stage
+        self._scene_counter: int = 0  # 씬 카운터 (기억 마모 기준)
 
     @property
     def disposition(self) -> float:
@@ -93,8 +114,10 @@ class NPCMemoryGraph:
         Returns:
             생성된 기억 노드 ID
         """
-        if stage != self._current_stage:
-            return ""  # 다른 스테이지 사건은 기록하지 않음
+        # 스테이지 격리: event/observation만 소속 스테이지에서만 기록
+        # dialogue/quest/emotion은 NPC 고유 기억이므로 항상 기록
+        if memory_type in _STAGE_ISOLATED_TYPES and stage != self._current_stage:
+            return ""
 
         node_id = f"{self.profile.name}_{memory_type}_{uuid.uuid4().hex[:8]}"
 
@@ -104,6 +127,9 @@ class NPCMemoryGraph:
             content=content,
             stage=stage,
             disposition_at=self._disposition,
+            created_at_scene=self._scene_counter,
+            memory_state=MEMORY_STATE_ACTIVE,
+            protected=memory_type in _PRUNING_PROTECTED_TYPES,
         )
 
         # 인과 관계 엣지
@@ -141,46 +167,77 @@ class NPCMemoryGraph:
     # ── 기억 조회 (스테이지 격리) ──
 
     def get_memories(self, stage: str | None = None, limit: int = 10) -> list[dict]:
-        """특정 스테이지의 최근 기억을 시간순으로 반환.
+        """최근 기억을 시간순으로 반환.
 
-        stage가 None이면 현재 스테이지 기준.
-        NPC 소속 스테이지가 아닌 기억은 반환하지 않음.
+        - forgotten 상태 기억은 제외
+        - faded 상태 기억은 포함하되 content가 축약됨
+        - dialogue/quest/emotion: 스테이지 무관 (NPC 고유 기억)
+        - event/observation: 해당 스테이지만 (격리)
         """
         target_stage = stage or self._current_stage
-
-        # 스테이지 격리: NPC 소속 스테이지만 조회 가능
-        if target_stage != self._current_stage:
-            return []
 
         memories = []
         for node_id in self._graph.nodes:
             node = self._graph.nodes[node_id]
-            if node.get("stage") == target_stage:
-                memories.append({"id": node_id, **node})
+            state = node.get("memory_state", MEMORY_STATE_ACTIVE)
 
-        # 시간순 정렬 (그래프 추가 순서 유지)
+            # forgotten은 제외
+            if state == MEMORY_STATE_FORGOTTEN:
+                continue
+
+            mem_type = node.get("type", "")
+
+            if mem_type in _STAGE_ISOLATED_TYPES:
+                if node.get("stage") != target_stage:
+                    continue
+
+            entry = {"id": node_id, **node}
+
+            # faded 기억은 내용 축약
+            if state == MEMORY_STATE_FADED:
+                content = entry.get("content", "")
+                entry["content"] = content[:60] + "... (흐릿한 기억)" if len(content) > 60 else content
+
+            memories.append(entry)
+
         return memories[-limit:]
 
     def get_dialogue_history(self, stage: str | None = None, limit: int = 5) -> list[dict]:
-        """대화 기억만 필터링하여 반환."""
-        memories = self.get_memories(stage, limit=50)
-        dialogues = [m for m in memories if m.get("type") == "dialogue"]
+        """대화 기억을 반환. forgotten 제외, faded는 축약 포함."""
+        dialogues = []
+        for node_id in self._graph.nodes:
+            node = self._graph.nodes[node_id]
+            if node.get("type") != "dialogue":
+                continue
+
+            state = node.get("memory_state", MEMORY_STATE_ACTIVE)
+            if state == MEMORY_STATE_FORGOTTEN:
+                continue
+
+            entry = {"id": node_id, **node}
+            if state == MEMORY_STATE_FADED:
+                content = entry.get("content", "")
+                entry["content"] = content[:60] + "... (흐릿한 기억)" if len(content) > 60 else content
+
+            dialogues.append(entry)
+
         return dialogues[-limit:]
 
     def get_memory_summary(self, stage: str | None = None) -> str:
         """프롬프트에 주입할 NPC 기억 요약 문자열."""
         memories = self.get_memories(stage, limit=5)
         if not memories:
-            return f"({self.profile.name}은(는) 아직 이 장소에서의 기억이 없습니다)"
+            return f"({self.profile.name}은(는) 아직 기억이 없습니다)"
 
         lines = []
         for m in memories:
             mem_type = m.get("type", "unknown")
             content = m.get("content", "")
-            # 대화는 축약
+            state = m.get("memory_state", MEMORY_STATE_ACTIVE)
             if len(content) > 150:
                 content = content[:150] + "..."
-            lines.append(f"[{mem_type}] {content}")
+            prefix = "🔅 " if state == MEMORY_STATE_FADED else ""
+            lines.append(f"{prefix}[{mem_type}] {content}")
 
         return "\n".join(lines)
 
@@ -209,6 +266,112 @@ class NPCMemoryGraph:
                 queue.append((neighbor, d + 1))
 
         return related
+
+    # ── 기억 마모 (Memory Decay & Pruning) ──
+
+    def advance_scene(self):
+        """씬 카운터를 1 증가시키고 기억 마모를 실행."""
+        self._scene_counter += 1
+        self._decay_memories()
+
+    def _decay_memories(self):
+        """씬 경과에 따라 기억을 마모시킨다.
+
+        - protected(quest) 노드는 마모되지 않음
+        - 수명 초과 시: active → faded → forgotten 단계적 전환
+        - faded 기억은 수명의 1.5배가 지나면 forgotten으로 전환
+        """
+        for node_id in list(self._graph.nodes):
+            node = self._graph.nodes[node_id]
+
+            # 보호된 기억은 건너뜀
+            if node.get("protected", False):
+                continue
+
+            state = node.get("memory_state", MEMORY_STATE_ACTIVE)
+            if state == MEMORY_STATE_FORGOTTEN:
+                continue  # 이미 잊혀진 기억
+
+            mem_type = node.get("type", "event")
+            lifespan = _MEMORY_LIFESPAN.get(mem_type, 8)
+            if lifespan < 0:
+                continue  # -1 = 영구 기억
+
+            created = node.get("created_at_scene", 0)
+            age = self._scene_counter - created
+
+            if state == MEMORY_STATE_ACTIVE and age >= lifespan:
+                # active → faded
+                self._graph.nodes[node_id]["memory_state"] = MEMORY_STATE_FADED
+
+            elif state == MEMORY_STATE_FADED and age >= int(lifespan * 1.5):
+                # faded → forgotten
+                self._graph.nodes[node_id]["memory_state"] = MEMORY_STATE_FORGOTTEN
+
+    def recover_memory(self, keyword: str) -> list[dict]:
+        """대화를 통해 잊혀진 기억을 복원.
+
+        keyword가 forgotten 기억의 content에 포함되면 해당 기억을 faded로 복원.
+        퀘스트 관련 기억이 복원되면 다시 protected 마스크를 씌운다.
+
+        Returns:
+            복원된 기억 목록
+        """
+        recovered = []
+        for node_id in self._graph.nodes:
+            node = self._graph.nodes[node_id]
+            if node.get("memory_state") != MEMORY_STATE_FORGOTTEN:
+                continue
+
+            content = node.get("content", "")
+            if keyword in content:
+                # forgotten → faded로 복원 (완전 복원이 아닌 흐릿한 기억)
+                self._graph.nodes[node_id]["memory_state"] = MEMORY_STATE_FADED
+                # 씬 카운터 갱신 → 다시 마모 시작 시점 리셋
+                self._graph.nodes[node_id]["created_at_scene"] = self._scene_counter
+
+                # 퀘스트 기억이 복원되면 보호 마스크 재적용
+                if node.get("type") == "quest":
+                    self._graph.nodes[node_id]["protected"] = True
+                    self._graph.nodes[node_id]["memory_state"] = MEMORY_STATE_ACTIVE
+
+                recovered.append({"id": node_id, **self._graph.nodes[node_id]})
+
+        return recovered
+
+    def refresh_memory(self, node_id: str):
+        """특정 기억을 '다시 떠올림' 처리.
+
+        대화에서 언급되거나 관련 사건이 발생하면 호출하여
+        기억의 씬 카운터를 갱신하고 active 상태로 복원.
+        """
+        if node_id not in self._graph:
+            return
+        self._graph.nodes[node_id]["created_at_scene"] = self._scene_counter
+        self._graph.nodes[node_id]["memory_state"] = MEMORY_STATE_ACTIVE
+
+    def get_forgotten_memories(self) -> list[dict]:
+        """잊혀진 기억 목록 (복원 가능한 기억)."""
+        forgotten = []
+        for node_id in self._graph.nodes:
+            node = self._graph.nodes[node_id]
+            if node.get("memory_state") == MEMORY_STATE_FORGOTTEN:
+                forgotten.append({"id": node_id, **node})
+        return forgotten
+
+    def get_memory_stats(self) -> dict:
+        """기억 상태 통계."""
+        stats = {MEMORY_STATE_ACTIVE: 0, MEMORY_STATE_FADED: 0, MEMORY_STATE_FORGOTTEN: 0}
+        protected = 0
+        for node_id in self._graph.nodes:
+            node = self._graph.nodes[node_id]
+            state = node.get("memory_state", MEMORY_STATE_ACTIVE)
+            stats[state] = stats.get(state, 0) + 1
+            if node.get("protected", False):
+                protected += 1
+        stats["protected"] = protected
+        stats["total"] = len(self._graph.nodes)
+        return stats
 
     # ── 스테이지 관리 ──
 
@@ -282,6 +445,11 @@ class NPCManager:
 
     def get_all_npcs(self) -> dict[str, NPCMemoryGraph]:
         return self._npcs
+
+    def advance_all_scenes(self):
+        """모든 NPC의 씬 카운터를 진행시키고 기억 마모 실행."""
+        for npc in self._npcs.values():
+            npc.advance_scene()
 
     def record_scene_event(self, event_content: str, stage: str):
         """씬에서 발생한 사건을 해당 스테이지의 모든 NPC에게 기록."""
