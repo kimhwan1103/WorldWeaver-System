@@ -1,7 +1,16 @@
 [project]
-name = "game"
+name = "worldweaver-system"
 version = "0.1.0"
-description = "Add your description here"
+description = "AI 기반 신화 테마 게임 생성 시스템"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "langchain>=0.3",
+    "langchain-google-genai>=2.1",
+    "langchain-community>=0.3",
+    "langchain-text-splitters>=0.3",
+    "faiss-cpu>=1.9",
+    "networkx>=3.4",
+    "python-dotenv>=1.0",
+    "pydantic>=2.0",
+]

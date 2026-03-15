@@ -1,0 +1,15 @@
+{
+  "description": "시스템 공통 설정 (테마 독립적)",
+  "llm": {
+    "model": "gemini-2.5-flash",
+    "embedding_model": "models/gemini-embedding-001"
+  },
+  "rag": {
+    "chunk_size": 500,
+    "chunk_overlap": 50
+  },
+  "game": {
+    "max_scenes": 50,
+    "graph_output": "story_graph.graphml"
+  }
+}

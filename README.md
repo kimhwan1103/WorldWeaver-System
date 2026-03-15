@@ -1,128 +1,119 @@
 # WorldWeaver System
 
-> Google Gemini와 LangChain을 활용한 AI 기반 신화 테마 게임 생성 프로젝트
+> 세계관 문서만 넣으면 AI가 게임을 만드는 범용 인터랙티브 스토리 생성 엔진
 
 ## 프로젝트 소개
 
-WorldWeaver System은 LangChain 프레임워크와 대규모 언어 모델(LLM)을 기반으로 실시간 텍스트형 게임을 구동하고 동적 스토리를 생성하는 프로젝트입니다. 플레이어의 입력이 발생할 때마다 AI가 실시간으로 다음 스토리, 선택지, 게임 메카닉을 추론하여 끊임없이 이어지는 상호작용형 게임 플레이 환경을 제공합니다.
+WorldWeaver System은 **세계관 문서 폴더 하나만 제공하면**, AI가 자동으로 게임 시스템을 설계하고 실시간 텍스트형 게임을 구동하는 범용 스토리 생성 엔진입니다.
 
-게임의 구조는 방향 그래프(Directed Graph) 자료구조로 실시간 맵핑 및 관리됩니다. AI가 생성하는 개별 씬(Scene)은 노드(Node)로, 플레이어의 성향이 반영된 선택지는 엣지(Edge)로 구성됩니다. 이를 통해 게임이 진행될수록 상태 보존형 데이터가 누적되며, 무한히 분기되면서도 세계관의 논리적 무결성을 잃지 않는 정교한 게임 플레이를 구현합니다.
+핵심 파이프라인:
+
+```
+세계관 문서 → 지식 그래프 추출 → 테마 JSON 자동 생성 → 인터랙티브 게임 구동
+```
+
+게임의 구조는 방향 그래프(Directed Graph)로 관리됩니다. AI가 생성하는 씬(Scene)은 노드로, 선택지는 엣지로 구성되며, 그래프 이력과 월드 스테이트를 조합한 **룰베이스 검증 엔진**이 세계관의 논리적 무결성을 보장합니다.
 
 ![스토리 그래프 시각화](assets/story_graph.png)
 
 ## 주요 기능
 
-- **RAG 기반 스토리 생성** - 세계관 문서에서 관련 정보를 검색하여 맥락에 맞는 내러티브 생성
-- **구조화된 LLM 출력** - Pydantic 모델로 LLM의 자유형 출력을 제목, 설명, 분위기, 선택지 등의 정형 데이터로 변환
-- **분기형 내러티브 그래프** - NetworkX DiGraph로 스토리 노드와 선택 엣지를 관리, GraphML로 내보내기 지원
-- **동적 선택지 조절** - 씬의 중요도에 따라 LLM이 자율적으로 2~5개의 선택지 생성
-- **페르소나 기반 플레이** - 영웅/악당 페르소나에 따라 자동으로 성향에 맞는 선택지를 선호
-- **누적 기억 시스템** - 생성된 스토리가 벡터 스토어에 지속 추가되어 이전 사건을 기억하고 참조
+- **지식 그래프 기반 테마 빌더** — 세계관 문서를 청킹 → 지식 그래프 추출 → 병합 → 테마 JSON 자동 생성
+- **범용 테마 시스템** — 코드 수정 없이 JSON만으로 완전히 다른 세계관의 게임 구동
+- **동적 월드 스테이트** — 테마 스키마가 정의하는 게이지/엔티티/컬렉션을 매 씬마다 LLM이 업데이트
+- **그래프 + 룰베이스 검증** — 그래프 이력과 월드 스테이트를 조합하여 모순 방지 (사전 지시 + 사후 검증)
+- **RAG 누적 기억** — 생성된 스토리가 벡터 스토어에 누적되어 이전 사건을 기억하고 참조
+- **구조화된 LLM 출력** — Pydantic 모델로 제목, 설명, 분위기, 선택지, 상태 변화를 정형 데이터로 변환
 
 ## 기술 스택
 
 | 카테고리 | 기술 | 용도 |
 |----------|------|------|
-| LLM | Google Gemini 2.5-Flash | 스토리 내러티브 생성 |
+| LLM | Google Gemini 2.5-Flash | 스토리 생성, 지식 그래프 추출, 테마 설계 |
 | LLM 프레임워크 | LangChain (LCEL) | 파이프라인 오케스트레이션 |
-| 임베딩 | GoogleGenerativeAIEmbeddings | 텍스트 벡터화 및 시맨틱 검색 |
+| 벡터 검색 | FAISS + GoogleGenerativeAIEmbeddings | RAG 세계관 검색 + 누적 기억 |
 | 데이터 검증 | Pydantic | LLM 출력 스키마 검증 |
-| 그래프 | NetworkX | 스토리 분기 구조 관리 |
-| 환경 관리 | python-dotenv | API 키 관리 |
+| 그래프 | NetworkX | 스토리 분기 관리 + 지식 그래프 |
+| 설정 관리 | JSON 외부화 | 프롬프트/규칙/테마를 코드 분리 |
 
 ## 아키텍처
 
-### RAG 파이프라인
+### 전체 시스템 흐름
 
 ```
-[세계관 문서 (lore_documents/)]
-        │
-        ▼
-[텍스트 분할 (500자 청크, 50자 오버랩)]
-        │
-        ▼
-[벡터 스토어 구축]
-        │
-        ├──── 검색 (Retriever) ◄── 사용자 프롬프트
-        │            │
-        │            ▼
-        │     [관련 컨텍스트 추출]
-        │            │
-        │            ▼
-        │     [프롬프트 템플릿에 주입]
-        │            │
-        │            ▼
-        │     [Gemini LLM 호출]
-        │            │
-        │            ▼
-        │     [JsonOutputParser → StoryNode]
-        │            │
-        │            ▼
-        └──── [새로운 스토리를 벡터 스토어에 추가 (기억 누적)]
+[세계관 문서]
+     │
+     ▼
+[Theme Builder] ─── 청킹 → 청크별 지식 그래프 추출 → 병합 → 테마 JSON 생성
+     │
+     ▼
+[테마 JSON] ─── world_state_schema, rules, personas, initial_prompt
+     │
+     ▼
+[Game Session]
+     │
+     ├── RuleEngine.pre_generation_directives()  ◄── WorldState + StoryGraph
+     │        │
+     │        ▼
+     ├── LCEL Chain (RAG 컨텍스트 + 월드 스테이트 + 지시사항 → LLM → 씬 생성)
+     │        │
+     │        ▼
+     ├── RuleEngine.validate_scene()  ── 위반 시 재생성 (최대 2회)
+     │        │
+     │        ▼
+     ├── WorldState.apply_changes()  ── 상태 업데이트
+     ├── StoryGraph.add_scene()      ── 그래프 기록
+     └── LoreMemory.add_memory()     ── RAG 기억 누적
 ```
 
-### LCEL 체인 구성
+### 테마 빌더 파이프라인
 
-```python
-chain = (
-    {"context": retriever, "request": RunnablePassthrough()}
-    | prompt_template      # 세계관 컨텍스트 + 요청을 결합
-    | llm                  # Gemini 2.5-Flash
-    | output_parser        # JSON → StoryNode 파싱
-)
+```
+[문서 로드 + 청킹]
+     │
+     ▼
+[청크별 LLM 호출] → 부분 지식 그래프 추출 (노드: 캐릭터/장소/아이템/시스템/개념)
+     │
+     ▼
+[그래프 병합] → 같은 이름의 노드가 청크 간 연결점 역할
+     │
+     ├── knowledge_graph.graphml 저장 (시각화 가능)
+     │
+     ▼
+[병합된 그래프 → LLM] → 테마 JSON 생성
 ```
 
 ## 프로젝트 구조
 
 ```
-game/
-├── main.py                          # 진입점
-├── stroy_generator.py               # 기본 스토리 생성 (Gemini 직접 호출)
-├── stroy_generator_langchain.py     # RAG + LangChain 기반 고급 스토리 생성
-├── story_graph.graphml              # 생성된 스토리 그래프 출력
-├── lore_documents/
-│   ├── core_systems.txt             # 게임 메카닉 설계 문서
-│   └── worldbuilding.txt            # 세계관 설정 문서
-├── pyproject.toml                   # 프로젝트 설정
-├── .env                             # 환경 변수 (API 키)
-└── .python-version                  # Python 3.13
+WorldWeaver-System/
+├── main.py                          # CLI 진입점 (build-theme / play)
+├── worldweaver/                     # 핵심 엔진 패키지
+│   ├── chain.py                     # LCEL 체인 조립
+│   ├── config.py                    # 시스템 설정 (JSON에서 로드)
+│   ├── game.py                      # GameSession (생성→검증→상태 업데이트 루프)
+│   ├── graph.py                     # StoryGraph (NetworkX DiGraph + 이력 조회)
+│   ├── models.py                    # Pydantic 데이터 모델
+│   ├── persona.py                   # 페르소나 기반 선택 전략
+│   ├── prompt_loader.py             # JSON 설정 로더 (캐싱)
+│   ├── rag.py                       # LoreMemory (FAISS 벡터 스토어)
+│   ├── rule_engine.py               # 그래프 + 월드 스테이트 룰베이스 검증
+│   ├── theme_builder.py             # 지식 그래프 기반 테마 자동 생성
+│   └── world_state.py               # 스키마 기반 동적 월드 스테이트
+├── prompts/                         # 외부화된 프롬프트/설정 (코드 수정 없이 교체 가능)
+│   ├── game_config.json             # LLM/RAG/게임 시스템 설정
+│   ├── story_template.json          # 스토리 생성 프롬프트 템플릿
+│   ├── rules.json                   # 공통 룰엔진 규칙
+│   ├── theme_builder.json           # 테마 빌더 프롬프트
+│   └── themes/
+│       └── mythology.json           # 신화 테마 (예시)
+├── lore_documents/                  # 세계관 문서
+│   ├── worldbuilding.txt
+│   └── core_systems.txt
+├── docs/                            # 프로젝트 문서
+├── visualize_graph.py               # 스토리 그래프 시각화
+└── pyproject.toml
 ```
-
-## 데이터 모델
-
-```python
-class StoryNode(BaseModel):
-    title: str           # 씬 제목 (예: "제1장: 균열의 서막")
-    description: str     # 내러티브 본문 (2~3 단락)
-    features: Features   # 씬 메타데이터
-    choices: list[Choice] # 플레이어 선택지 (2~5개)
-
-class Features(BaseModel):
-    mood: str            # 분위기 (Tense, Mysterious, Hopeful 등)
-    morality_impact: str # 도덕적 영향 (Good, Evil, Neutral)
-
-class Choice(BaseModel):
-    text: str            # 선택지 텍스트
-    edge_feature: str    # 성향 (Aggressive, Diplomatic, Cautious)
-    next_node_prompt: str # 다음 씬 생성을 위한 프롬프트
-```
-
-스토리 노드는 NetworkX의 방향 그래프에 추가되며, 각 선택지는 다음 노드를 향한 엣지로 저장됩니다. 최종 그래프는 GraphML 형식으로 내보내어 시각화할 수 있습니다.
-
-## 세계관
-
-태초의 **원초의 흐름(Primordial Flow)** 에서 세계가 탄생했으며, 이 흐름이 응축된 곳마다 서로 다른 이름이 붙었습니다. 올림포스의 화로, 위그드라실의 뿌리, 쿤룬의 봉우리, 두아트의 강, 티르 나 노그의 안개 등 모든 신화는 같은 기원의 서로 다른 기록입니다.
-
-신들의 본질은 **봉인과 유물**로 흩어져 전해지지만, 시대가 흐르며 봉인이 약해질 때마다 **균열(Rift)** 이 열려 특정 신화의 논리로 현실을 재작성합니다. 이때 **별자리의 수호자**가 깨어나 성단 제단을 수호하고, 왜곡의 군대에 맞서 싸웁니다.
-
-### 핵심 게임 시스템
-
-- **균열 필드 (Rift Fields)** - 신화별 고유 규칙이 적용되는 전장
-- **별자리 공명 (Constellation Resonance)** - 타워, 영웅, 유물 간 별자리 태그 기반 시너지
-- **신화 계보 시너지** - 같은 신화 유닛 조합 시 교리 보너스
-- **유물 & 의식** - 신화 아티팩트 장착 및 맵 전체 주문
-- **타락 & 봉인 게이지** - 동적 난이도 조절 및 보스 약화 메커니즘
-- **신화 연금술 (Mythic Alchemy)** - 서로 다른 신화의 유물을 융합
 
 ## 실행 방법
 
@@ -134,78 +125,80 @@ class Choice(BaseModel):
 ### 설치
 
 ```bash
-# 저장소 클론
 git clone <repository-url>
-cd game
+cd WorldWeaver-System
 
-# 가상환경 생성 및 활성화
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
-# 의존성 설치
-pip install langchain langchain-google-genai langchain-community langchain-text-splitters
-pip install faiss-cpu networkx python-dotenv
+pip install -e .
 ```
 
 ### 환경 설정
 
-`.env` 파일에 Google API 키를 설정합니다:
-
 ```
+# .env
 GOOGLE_API_KEY=your_api_key_here
 ```
 
-### 실행
+### 테마 자동 생성
+
+세계관 문서 폴더만 준비하면 테마 JSON이 자동 생성됩니다:
 
 ```bash
-python stroy_generator_langchain.py
+python main.py build-theme --lore-dir lore_documents
+```
+
+### 게임 실행
+
+```bash
+# 인터랙티브 모드 (직접 플레이)
+python main.py play --theme mythology
+
+# 자동 데모 모드
+python main.py play --theme mythology --mode auto --persona hero --scenes 10
 ```
 
 ## 실행 예시
 
 ```
+테마 로드: 신화 테마 - 별자리의 수호자
 세계관 정보를 로드하여 RAG 메모리 구축 ....
 RAG 구축 완료
 
 ========================================================
 장면 생성 중 ....
 
-[ 제1장: 균열의 서막 - 사자자리의 경고 ]
+[ 제1장: 균열의 서막 ]
 밤하늘의 사자자리(Leo)는 언제나 굳건한 빛을 발하며 별의 제단을 비추는
 이정표였습니다. 하지만 오늘 밤, 그 웅장했던 빛이 미세하게 떨리더니 이내
-눈에 띄게 약해지기 시작했습니다. 별자리의 수호자인 당신은 불길한 예감에
-사로잡혔습니다. 이윽고, 눈앞의 평온했던 계곡이 마치 거대한 존재의 손에
-찢겨 나가는 듯한 끔찍한 소리와 함께 균열이 벌어졌습니다. ...
+눈에 띄게 약해지기 시작했습니다...
 
-(시스템 : 새로운 기억이 저장되었음)
-
---- 선택지 ---
-1. 발밑의 신성한 광맥에 기초적인 감시탑을 건설하여 적의 움직임을 파악하고 방어선을 구축한다.
-2. 사자자리의 약해진 빛을 감지하고, 별자리의 힘을 끌어와 신성한 광맥의 에너지를 증폭시킬 방법을 모색한다.
-3. 메두사의 석상들에 맞서기 위해, 고대 기록을 되짚어 그리스 신화 속 메두사의 약점이나 대응 전략을 떠올린다.
-4. 다가오는 첫 번째 파동에 직접 맞서 싸울 준비를 하며, 수호자의 무기를 들고 전방으로 나선다.
-
-(시스템: 페르소나 선택 -> '메두사의 석상들에 맞서기 위해, 고대 기록을 되짚어...')
-그래프가 'story_graph.graphml' 파일로 저장되었습니다. 노드 6개, 엣지 5개
-
-========================================================
-장면 생성 중 ....
-
-[ 제2장: 석화의 그림자, 고대의 지혜 ]
-사자자리의 빛은 여전히 불안하게 떨리고 있었고, 리프트에서 쏟아져 나온
-메두사의 석상들은 침묵 속에서 마치 거대한 파도처럼 다가오고 있었다.
-
-"메두사… 직접 눈을 마주치면 모든 것이 돌이 된다.
- 하지만 페르세우스는… 방패에 비친 그림자를 이용해 그녀의 목을 베었다."
-
-(시스템 : 새로운 기억이 저장되었음)
+(시스템: 새로운 기억이 저장되었음)
+(시스템: 월드 스테이트 업데이트됨)
+  활성 균열: 그리스 신화 | 타락 게이지: 0.1 | 봉인 게이지: 0.0
+  캐릭터: 메두사(적대)
+  아이템: 수호자의 검
 
 --- 선택지 ---
-1. 주변에서 반사될 만한 물건을 찾거나, 신성한 광맥으로 급조할 방어구를 구상한다.
-2. 메두사의 석화 능력 범위와 지속 시간, 그리고 석상들의 이동 속도에 대한 정보를 떠올려본다.
-3. 보유한 신화 유물 중 메두사의 저주에 대항하거나, 약점을 공략할 수 있는 조합을 고민한다.
-4. 스틱스 강물이나 신성한 광맥 등 변형된 지형지물을 활용하여 방어선을 구축하거나 함정을 설치할 방법을 모색한다.
+1. 신성한 광맥에 감시탑을 건설하여 방어선을 구축한다.
+2. 별자리의 힘을 끌어와 광맥의 에너지를 증폭시킨다.
+3. 고대 기록을 되짚어 메두사의 약점을 떠올린다.
+4. 수호자의 무기를 들고 전방으로 나선다.
+```
 
-(시스템: 페르소나 선택 -> '보유한 신화 유물 중 메두사의 저주에 대항하거나...')
-그래프가 'story_graph.graphml' 파일로 저장되었습니다. 노드 11개, 엣지 10개
+## 새로운 테마 만들기
+
+코드 수정 없이 세계관 문서만 준비하면 됩니다:
+
+```bash
+# 1. 세계관 문서 폴더 준비
+mkdir lore_scifi
+# worldbuilding.txt, systems.txt 등 작성
+
+# 2. 테마 자동 생성
+python main.py build-theme --lore-dir lore_scifi --theme-name scifi
+
+# 3. 생성된 테마로 플레이
+python main.py play --theme scifi
 ```

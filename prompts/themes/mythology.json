@@ -1,0 +1,95 @@
+{
+  "name": "mythology",
+  "display_name": "신화 테마 - 별자리의 수호자",
+  "description": "원초의 흐름에서 탄생한 세계를 배경으로, 균열을 막고 별의 제단을 수호하는 이야기",
+
+  "initial_prompt": "당신은 별의 제단을 지키는 '별자리의 수호자'입니다. 밤하늘을 올려다보자 사자자리(Leo)의 빛이 약해지더니, 눈앞의 평온한 계곡이 찢어지며 '그리스 신화'의 논리로 재작성되는 '리프트'가 열립니다. 강물은 스틱스처럼 검게 변하고, 발밑의 땅에서는 탑을 건설할 수 있는 '신성한 광맥'의 맥동이 느껴집니다. 저 멀리, 리프트의 심연에서 메두사의 깨어난 석상들이 첫 번째 파동을 이루며 다가오고 있습니다.",
+
+  "lore_dir": "lore_documents",
+
+  "world_state_schema": {
+    "entities": {
+      "label": "캐릭터 상태",
+      "description": "등장 캐릭터와 현재 상태",
+      "removed_statuses": ["처치됨", "소멸", "봉인됨"]
+    },
+    "gauges": {
+      "corruption": {
+        "label": "타락 게이지",
+        "description": "세계의 타락 정도. 높을수록 강력한 왜곡의 군대가 출현",
+        "min": 0.0,
+        "max": 1.0,
+        "default": 0.0
+      },
+      "seal": {
+        "label": "봉인 게이지",
+        "description": "축적된 봉인의 힘. 높을수록 보스를 약화시킬 수 있음",
+        "min": 0.0,
+        "max": 1.0,
+        "default": 0.0
+      }
+    },
+    "properties": {
+      "active_rift": {
+        "label": "활성 균열",
+        "description": "현재 활성화된 균열의 신화 체계",
+        "default": "없음"
+      }
+    },
+    "collections": {
+      "inventory": {
+        "label": "보유 아이템",
+        "description": "플레이어가 보유한 아이템 및 유물"
+      },
+      "visited_locations": {
+        "label": "방문 지역",
+        "description": "플레이어가 방문한 지역 목록"
+      },
+      "resolved_events": {
+        "label": "해결된 사건",
+        "description": "이미 해결된 사건 목록"
+      },
+      "unresolved_hooks": {
+        "label": "미회수 복선",
+        "description": "아직 회수되지 않은 복선 목록"
+      }
+    }
+  },
+
+  "rules": {
+    "gauge_rules": [
+      {
+        "gauge": "corruption",
+        "operator": ">=",
+        "threshold": 0.8,
+        "directive": "타락 게이지가 위험 수준입니다. 이 씬에서 보스 또는 중대한 위협이 등장해야 합니다."
+      },
+      {
+        "gauge": "corruption",
+        "operator": ">=",
+        "threshold": 0.5,
+        "directive": "타락 게이지가 상승 중입니다. 긴박한 분위기를 반영하세요."
+      },
+      {
+        "gauge": "seal",
+        "operator": ">=",
+        "threshold": 0.8,
+        "directive": "봉인 게이지가 충분합니다. 봉인을 활용하여 보스를 약화시키는 선택지를 포함하세요."
+      }
+    ],
+    "climax_rules": [
+      {
+        "min_depth": 8,
+        "gauge": "corruption",
+        "operator": ">=",
+        "threshold": 0.5,
+        "directive": "스토리가 충분히 진행되었고 위기가 높습니다. 절정(climax) 단계로 진입하세요."
+      }
+    ]
+  },
+
+  "personas": {
+    "hero": ["Good", "Diplomatic", "Cautious"],
+    "villain": ["Evil", "Aggressive"]
+  }
+}
