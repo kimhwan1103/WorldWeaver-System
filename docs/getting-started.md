@@ -48,7 +48,12 @@ python main.py build-theme --lore-dir lore_documents --theme-name mythology
 1. 문서 로드 → 청크 분할
 2. 청크별 지식 그래프 추출 (LLM)
 3. 그래프 병합 → `knowledge_graph.graphml` 저장
-4. 병합된 그래프 → 테마 JSON 생성 → `prompts/themes/{name}.json` 저장
+4. 병합된 그래프 → 테마 JSON 생성 (NPC 프로필 포함) → `prompts/themes/{name}.json` 저장
+
+테마 빌더는 지식 그래프의 캐릭터/세력 노드를 분석하여 **NPC 프로필을 자동 생성**합니다:
+- 캐릭터 노드에서 대화 가능한 NPC 후보 2~5명 선별
+- 장소 노드와의 관계를 분석하여 스테이지(소속 장소) 배정
+- NPC 성격, 말투, 역할, 초기 호감도, 트리거 조건 자동 설계
 
 ### 2. 게임 실행 (`play`)
 
@@ -110,6 +115,7 @@ python main.py play --theme scifi
 - `world_state_schema` — 게이지, 엔티티, 컬렉션 정의
 - `rules` — 게이지 임계값 규칙
 - `personas` — 페르소나 성향 매핑
+- `npc_profiles` — NPC 프로필 목록 (선택, 상세 가이드: `docs/npc-system.md`)
 
 ## 그래프 시각화
 
@@ -122,3 +128,55 @@ python visualize_graph.py
 `assets/story_graph.png`로 이미지가 저장됩니다.
 
 테마 빌더 실행 시 생성되는 `knowledge_graph.graphml`도 같은 방법으로 시각화할 수 있습니다.
+
+## NPC 대화 시스템
+
+게임 실행 중 NPC가 있는 스테이지에 진입하면, 선택지에 `💬 대화하기` 옵션이 나타납니다.
+
+### 대화 흐름
+
+1. 선택지에서 NPC 대화를 선택
+2. 자유 텍스트 입력으로 NPC와 1:1 대화
+3. NPC가 성격/말투/호감도에 맞는 응답 생성
+4. 대화 중 NPC 행동 발생 가능:
+   - 아이템 지급 → 인벤토리에 추가
+   - 퀘스트 부여 → 미회수 복선에 추가
+   - 비밀 공개 → RAG 메모리에 저장
+5. `떠나기` 입력으로 대화 종료
+6. 호감도가 월드 스테이트에 반영되어 이후 스토리에 영향
+
+### NPC 주도 이벤트
+
+특정 조건이 충족되면 NPC가 자동으로 등장합니다:
+- 스토리 깊이 (예: 3번째 씬 이후)
+- 게이지 임계값 (예: 타락 ≥ 0.6)
+- 호감도 수준 (예: 0.6 이상일 때)
+- 아이템 보유 (예: 특정 아이템 소지 시)
+
+### NPC 프로필 수동 작성
+
+테마 JSON에 `npc_profiles` 배열을 추가합니다:
+
+```json
+{
+  "npc_profiles": [
+    {
+      "name": "카이론",
+      "personality": "현명하고 차분한 현자. 비유로 가르치는 것을 선호한다.",
+      "tone": "고풍스러운 존댓말. '~하였느니라', '~이니'와 같은 고어체.",
+      "role": "현자",
+      "stage": "별의 제단",
+      "initial_disposition": 0.7,
+      "trigger_conditions": [
+        {
+          "min_depth": 3,
+          "min_disposition": 0.6,
+          "directive": "카이론이 수호자에게 다가와 고대의 비밀을 알려주려 합니다."
+        }
+      ]
+    }
+  ]
+}
+```
+
+자세한 NPC 시스템 설명은 [NPC 시스템 문서](npc-system.md)를 참고하세요.

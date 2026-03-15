@@ -11,8 +11,7 @@ GRAPH_OUTPUT = Path(_cfg["game"]["graph_output"])
 CHUNK_SIZE = _cfg["rag"]["chunk_size"]
 CHUNK_OVERLAP = _cfg["rag"]["chunk_overlap"]
 
-# LLM 설정
-LLM_MODEL = _cfg["llm"]["model"]
+# 임베딩 설정
 EMBEDDING_MODEL = _cfg["llm"]["embedding_model"]
 
 # 게임 설정

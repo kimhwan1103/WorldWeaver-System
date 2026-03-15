@@ -1,11 +1,10 @@
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableSequence
-from langchain_google_genai import ChatGoogleGenerativeAI
 
-from worldweaver.config import LLM_MODEL
-from worldweaver.models import StoryNode
-from worldweaver.prompt_loader import get_story_template
+from worldweaver.llm_factory import create_llm
+from worldweaver.models import NPCDialogueResponse, StoryNode
+from worldweaver.prompt_loader import get_story_template, load_prompt
 
 
 def build_story_chain() -> RunnableSequence:
@@ -29,7 +28,33 @@ def build_story_chain() -> RunnableSequence:
             "state_change_schema": lambda x: x["state_change_schema"],
         }
         | prompt
-        | ChatGoogleGenerativeAI(model=LLM_MODEL)
+        | create_llm()
+        | parser
+    )
+
+    return chain
+
+
+def build_npc_dialogue_chain() -> RunnableSequence:
+    """NPC 대화 전용 LCEL 체인을 조립하여 반환."""
+    tmpl = load_prompt("npc_dialogue")
+    parser = JsonOutputParser(pydantic_object=NPCDialogueResponse)
+
+    prompt = PromptTemplate(
+        template=tmpl["template"],
+        input_variables=tmpl["input_variables"],
+        partial_variables={"format_instructions": parser.get_format_instructions()},
+    )
+
+    chain = (
+        {
+            "npc_context": lambda x: x["npc_context"],
+            "world_state": lambda x: x["world_state"],
+            "dialogue_history": lambda x: x["dialogue_history"],
+            "player_input": lambda x: x["player_input"],
+        }
+        | prompt
+        | create_llm()
         | parser
     )
 

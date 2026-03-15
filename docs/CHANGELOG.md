@@ -3,6 +3,41 @@
 이 프로젝트의 모든 주요 변경 사항을 기록합니다.
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따르며, [Semantic Versioning](https://semver.org/lang/ko/)을 사용합니다.
 
+## [0.4.0] - 2026-03-15
+
+### Added
+- **NPC 대화 시스템** — NPC와의 1:1 자유 대화 모드
+  - 성격, 말투, 호감도를 가진 NPC가 캐릭터성을 유지하며 응답
+  - NPC 행동: 아이템 지급(`give_item`), 퀘스트 부여(`give_quest`), 비밀 공개(`reveal_info`), 거절(`refuse`), 적대화(`attack`)
+  - 대화 중 호감도 자동 변동 (-0.2 ~ +0.2)
+  - NPC 대화 전용 LCEL 체인 (`build_npc_dialogue_chain()`)
+  - NPC 대화 프롬프트 템플릿 (`prompts/npc_dialogue.json`)
+- **NPC 메모리 그래프** (`npc_memory.py`)
+  - 각 NPC별 독립 NetworkX DiGraph로 기억 관리
+  - 기억 타입: dialogue, event, emotion, quest, observation
+  - 기억 간 인과 관계(caused_by) 및 시간순 관계(follows) 엣지
+  - **스테이지별 격리** — NPC는 자신의 소속 스테이지에서 발생한 사건만 기록/조회 가능
+  - `NPCManager` — 게임 세션 내 전체 NPC 통합 관리
+- **NPC 주도 이벤트** — 조건 기반 NPC 자동 등장
+  - `trigger_conditions`: 게이지 임계값, 호감도 범위, 아이템 보유, 스토리 깊이 기반 트리거
+  - 조건 충족 시 대화 선택지가 씬에 자동 주입
+- **테마 빌더 NPC 자동 생성** — 세계관 문서에서 NPC 프로필 자동 생성
+  - 지식 그래프의 캐릭터/세력 노드에서 2~5명 NPC 선별
+  - 장소 노드 연결 분석으로 스테이지 자동 배정
+  - `_validate_npc_profiles()` — NPC 프로필 필수 필드 검증 + 자동 보완
+- `NPCDialogueResponse` Pydantic 모델 (`models.py`)
+- `Choice` 모델에 `choice_type` (story/dialogue) 및 `npc_name` 필드 추가
+- `mythology.json`에 NPC 3명 추가 (카이론/에코/하데스의 사자)
+
+### Changed
+- `game.py` — NPC 대화 모드 루프, NPC 선택지 주입, 스테이지 추적, 씬별 NPC 사건 기록 추가
+- `chain.py` — `build_npc_dialogue_chain()` 함수 추가
+- `main.py` — NPC 대화 체인 초기화 연동
+- `world_state.py` — `to_summary_string()`에서 NPC 관계도와 일반 엔티티 분리 표시
+- `theme_builder.py` — `SCHEMA_INSTRUCTIONS`에 `npc_profiles` 스키마 추가
+- `theme_builder.json` — `generate_theme` 프롬프트에 NPC 생성 가이드라인 추가
+- `story_template.json` — NPC 대화 선택지 생성 가이드 추가
+
 ## [0.3.0] - 2026-03-15
 
 ### Added

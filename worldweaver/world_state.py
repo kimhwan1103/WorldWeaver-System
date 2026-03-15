@@ -101,6 +101,9 @@ class WorldState:
 
         return "\n".join(lines) if lines else "(초기 상태)"
 
+    # NPC 호감도 라벨 (disposition_label과 동일한 값들)
+    _NPC_DISPOSITION_LABELS = {"깊은 신뢰", "우호적", "중립", "경계", "적대적"}
+
     def to_summary_string(self) -> str:
         """콘솔 출력용 간결한 요약 문자열."""
         parts = []
@@ -120,9 +123,19 @@ class WorldState:
         lines = [f"  {line1}"]
 
         if self.entities:
-            chars = ", ".join(f"{k}({v})" for k, v in self.entities.items())
+            # NPC 관계도와 일반 엔티티 분리 표시
+            npc_entities = {k: v for k, v in self.entities.items() if v in self._NPC_DISPOSITION_LABELS}
+            other_entities = {k: v for k, v in self.entities.items() if v not in self._NPC_DISPOSITION_LABELS}
+
             entity_label = self._schema.get("entities", {}).get("label", "엔티티")
-            lines.append(f"  {entity_label}: {chars}")
+
+            if other_entities:
+                chars = ", ".join(f"{k}({v})" for k, v in other_entities.items())
+                lines.append(f"  {entity_label}: {chars}")
+
+            if npc_entities:
+                npc_chars = ", ".join(f"{k}({v})" for k, v in npc_entities.items())
+                lines.append(f"  NPC 관계: {npc_chars}")
 
         for name, items in self.collections.items():
             if items and name == "inventory":

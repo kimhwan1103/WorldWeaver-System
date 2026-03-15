@@ -1,6 +1,6 @@
 # Architecture
 
-> 최종 업데이트: v0.3.0
+> 최종 업데이트: v0.4.0
 
 ## 모듈 구조
 
@@ -8,23 +8,27 @@
 main.py                         # CLI 진입점 (build-theme / play 서브커맨드)
 worldweaver/
 ├── config.py                   # 시스템 설정 (game_config.json에서 로드)
-├── models.py                   # Pydantic 데이터 모델 (StoryNode, Choice, Features)
+├── models.py                   # Pydantic 모델 (StoryNode, Choice, NPCDialogueResponse)
 ├── prompt_loader.py            # JSON 설정 로더 (캐싱 지원)
 ├── rag.py                      # LoreMemory — FAISS 벡터 스토어 관리
-├── chain.py                    # 프롬프트 템플릿 + LCEL 체인 조립
+├── chain.py                    # LCEL 체인 조립 (스토리 + NPC 대화)
 ├── graph.py                    # StoryGraph — NetworkX DiGraph + 이력 조회
-├── world_state.py              # WorldState — 스키마 기반 동적 상태 관리
+├── world_state.py              # WorldState — 스키마 기반 동적 상태 관리 (NPC 관계도 포함)
 ├── rule_engine.py              # RuleEngine — 그래프 + 월드 스테이트 룰베이스 검증
+├── npc_memory.py               # NPC 메모리 그래프 — 방향성 그래프 기반 기억 시스템
+├── content_filter.py           # 입력 필터 + 주제 검증 + state_change 검증
+├── llm_factory.py              # LLM 제공자 팩토리 (Groq, Google)
 ├── persona.py                  # 페르소나 기반 선택 전략
-├── game.py                     # GameSession — 생성→검증→상태 업데이트 루프
-└── theme_builder.py            # 지식 그래프 기반 테마 자동 생성
+├── game.py                     # GameSession — 생성→검증→상태 업데이트 + NPC 대화 모드
+└── theme_builder.py            # 지식 그래프 기반 테마 + NPC 자동 생성
 prompts/
 ├── game_config.json            # LLM/RAG/게임 시스템 설정
 ├── story_template.json         # 스토리 생성 프롬프트 템플릿
+├── npc_dialogue.json           # NPC 대화 생성 프롬프트 템플릿
 ├── rules.json                  # 공통 룰엔진 규칙 + 임계값
-├── theme_builder.json          # 테마 빌더 프롬프트 (그래프 추출 / 테마 생성)
+├── theme_builder.json          # 테마 빌더 프롬프트 (그래프 추출 / 테마 + NPC 생성)
 └── themes/
-    └── mythology.json          # 신화 테마 예시
+    └── mythology.json          # 신화 테마 예시 (NPC 3명 포함)
 lore_documents/
 ├── worldbuilding.txt           # 세계관 설정 문서
 └── core_systems.txt            # 게임 메카닉 설계 문서
@@ -64,10 +68,14 @@ visualize_graph.py              # GraphML → PNG 시각화
         │   → knowledge_graph.graphml 저장
         │
         ▼
-[5] 병합된 그래프 → LLM → 테마 JSON 생성
+[5] 병합된 그래프 → LLM → 테마 JSON 생성 (NPC 프로필 포함)
+        │   캐릭터/세력 노드 → NPC 후보 선별 (2~5명)
+        │   장소 노드 연결 → 스테이지 배정 (격리 기준)
+        │   트리거 조건 자동 설계
         │
         ▼
 [6] 검증 + 자동 보완 → prompts/themes/{name}.json 저장
+        └── NPC 프로필 검증 (필수 필드, 호감도 범위, 트리거 유효성)
 ```
 
 ### 게임 세션 루프
@@ -94,9 +102,27 @@ visualize_graph.py              # GraphML → PNG 시각화
         ├── ③ RuleEngine.validate_scene()
         │      → 위반 발견 시 재생성 (최대 2회)
         │
-        ├── ④ WorldState.apply_changes() ── 상태 업데이트
-        ├── ⑤ StoryGraph.add_scene()     ── 그래프 기록
-        └── ⑥ LoreMemory.add_memory()    ── RAG 기억 누적
+        ├── ④ WorldState.apply_changes()        ── 상태 업데이트
+        ├── ⑤ StoryGraph.add_scene()           ── 그래프 기록
+        ├── ⑥ LoreMemory.add_memory()          ── RAG 기억 누적
+        ├── ⑦ NPCManager.record_scene_event()  ── 해당 스테이지 NPC에 사건 기록
+        └── ⑧ NPCManager._inject_npc_choices() ── 트리거된 NPC 대화 선택지 주입
+
+   [NPC 대화 모드] (플레이어가 대화 선택지 선택 시)
+        │
+        ├── ① NPCMemoryGraph.to_prompt_context()
+        │      ◄── NPC 프로필 (성격/말투/역할)
+        │      ◄── 현재 호감도 (0.0~1.0)
+        │      ◄── 스테이지 격리된 기억 (최근 5건)
+        │
+        ├── ② NPC Dialogue Chain 호출
+        │      ◄── npc_context + world_state + dialogue_history + player_input
+        │      → LLM → JsonOutputParser → NPCDialogueResponse dict
+        │
+        ├── ③ 호감도 업데이트 (disposition_delta 반영)
+        ├── ④ NPC 행동 처리 (아이템 지급/퀘스트/정보 공개/거절/적대화)
+        ├── ⑤ NPCMemoryGraph.record_dialogue() ── 대화 기억 기록
+        └── ⑥ WorldState 동기화 ── 호감도 라벨을 entities에 반영
 ```
 
 ## 핵심 클래스
@@ -128,10 +154,29 @@ NetworkX DiGraph를 감싸는 래퍼. `title_uuid` 형식의 고유 노드 ID로
 - `get_recent_moods()` — 최근 N씬 분위기 목록
 - `get_recent_scenes_summary()` — 최근 N씬 요약
 
+### NPCMemoryGraph (`npc_memory.py`)
+**방향성 그래프 기반 NPC 기억 시스템.** 각 NPC별 독립된 NetworkX DiGraph를 관리합니다.
+
+- **노드** = 기억 단위 (dialogue / event / emotion / quest / observation)
+- **엣지** = 인과 관계 (caused_by, follows, triggers)
+- **스테이지 격리** — NPC는 자신의 소속 스테이지에서 발생한 사건만 기록/조회 가능
+- **호감도** — 0.0~1.0 범위, 대화 내용에 따라 자동 변동 (적대적↔깊은 신뢰)
+- `to_prompt_context()` — NPC 프로필 + 기억을 프롬프트 주입용 문자열로 변환
+- `get_related_memories()` — 특정 기억과 인과적으로 연결된 기억을 BFS로 탐색
+
+### NPCManager (`npc_memory.py`)
+**게임 세션 내 모든 NPC의 메모리 그래프를 통합 관리.**
+
+- 테마 JSON의 `npc_profiles`에서 NPC 로드
+- `get_npcs_at_stage()` — 특정 스테이지에 존재하는 NPC 목록
+- `record_scene_event()` — 씬 사건을 해당 스테이지의 모든 NPC에게 기록
+- `get_triggered_npcs()` — NPC 주도 이벤트 조건 검사 (게이지/호감도/아이템/깊이)
+
 ### GameSession (`game.py`)
-게임 루프를 관리합니다. 두 가지 모드를 지원합니다:
+게임 루프를 관리합니다. 세 가지 모드를 지원합니다:
 - **interactive** — 사용자가 직접 번호를 입력하여 선택
 - **auto** — 페르소나(hero/villain)가 성향에 맞는 선택지를 자동 선택
+- **NPC 대화 모드** — 선택지에서 대화를 선택하면 1:1 자유 대화 루프 진입
 
 ## 설정 분리 구조
 
@@ -140,11 +185,12 @@ NetworkX DiGraph를 감싸는 래퍼. `title_uuid` 형식의 고유 노드 ID로
 ─────────────────           ──────────────────
 worldweaver/*.py             prompts/
   테마에 대해 아무것도          ├── game_config.json    ← 시스템 공통
-  모르는 범용 코드              ├── story_template.json ← 프롬프트 템플릿
+  모르는 범용 코드              ├── story_template.json ← 스토리 프롬프트 템플릿
+                              ├── npc_dialogue.json   ← NPC 대화 프롬프트 템플릿
                               ├── rules.json          ← 공통 규칙
                               ├── theme_builder.json   ← 테마 빌더 프롬프트
                               └── themes/
-                                  └── {name}.json     ← 테마별 1파일
+                                  └── {name}.json     ← 테마별 1파일 (NPC 포함)
 ```
 
 ## LCEL 체인 구성 (`chain.py`)
@@ -163,4 +209,49 @@ chain = (
     | llm               # Gemini 2.5-Flash
     | output_parser     # JSON → StoryNode dict
 )
+```
+
+### NPC 대화 LCEL 체인 (`chain.py`)
+
+```python
+npc_chain = (
+    {
+        "npc_context":      NPCMemoryGraph.to_prompt_context(),
+        "world_state":      WorldState.to_prompt_string(),
+        "dialogue_history": NPCMemoryGraph.get_dialogue_history(),
+        "player_input":     플레이어 대화 입력,
+    }
+    | prompt_template   # npc_dialogue.json에서 로드
+    | llm               # Gemini 2.5-Flash
+    | output_parser     # JSON → NPCDialogueResponse dict
+)
+```
+
+### NPC 메모리 그래프 구조
+
+```
+NPCMemoryGraph (NPC별 독립 DiGraph)
+│
+├── dialogue_001 ──follows──→ dialogue_002 ──follows──→ dialogue_003
+│                                  │
+│                            caused_by
+│                                  │
+├── event_001 ─────────────────────┘
+│
+├── observation_001
+│
+└── quest_001
+
+스테이지 격리:
+  [별의 제단]                    [균열 계곡]
+  ├── 카이론의 기억               ├── 에코의 기억
+  │   ├── 대화 3건                │   ├── 대화 1건
+  │   ├── 사건 5건                │   ├── 사건 3건
+  │   └── 관찰 2건                │   └── 관찰 1건
+  │                               └── 하데스의 사자의 기억
+  │                                   ├── 거래 기록 2건
+  │                                   └── 사건 3건
+  │
+  카이론은 균열 계곡의 사건을 모름 ✕
+  에코는 별의 제단의 사건을 모름 ✕
 ```

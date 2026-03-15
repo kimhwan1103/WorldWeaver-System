@@ -22,7 +22,7 @@ def cmd_build_theme(args):
 
 def cmd_play(args):
     """테마를 로드하고 게임을 실행."""
-    from worldweaver.chain import build_story_chain
+    from worldweaver.chain import build_npc_dialogue_chain, build_story_chain
     from worldweaver.game import GameSession
     from worldweaver.graph import StoryGraph
     from worldweaver.prompt_loader import load_theme
@@ -36,7 +36,14 @@ def cmd_play(args):
     memory = LoreMemory(lore_dir)
     chain = build_story_chain()
     graph = StoryGraph()
-    session = GameSession(memory, chain, graph, theme)
+
+    # NPC 프로필이 있으면 대화 체인도 초기화
+    npc_dialogue_chain = None
+    if theme.get("npc_profiles"):
+        npc_dialogue_chain = build_npc_dialogue_chain()
+        print(f"NPC 대화 시스템 활성화 — {len(theme['npc_profiles'])}명의 NPC 로드")
+
+    session = GameSession(memory, chain, graph, theme, npc_dialogue_chain)
 
     initial_prompt = theme["initial_prompt"]
 

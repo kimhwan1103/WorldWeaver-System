@@ -9,16 +9,21 @@ WorldWeaver System은 **세계관 문서 폴더 하나만 제공하면**, AI가 
 핵심 파이프라인:
 
 ```
-세계관 문서 → 지식 그래프 추출 → 테마 JSON 자동 생성 → 인터랙티브 게임 구동
+세계관 문서 → 지식 그래프 추출 → 테마 JSON + NPC 프로필 자동 생성 → 인터랙티브 게임 구동
 ```
 
 게임의 구조는 방향 그래프(Directed Graph)로 관리됩니다. AI가 생성하는 씬(Scene)은 노드로, 선택지는 엣지로 구성되며, 그래프 이력과 월드 스테이트를 조합한 **룰베이스 검증 엔진**이 세계관의 논리적 무결성을 보장합니다.
+
+NPC는 각자 **독립된 방향성 그래프 기반 메모리**를 가지며, 스테이지(장소)별로 격리된 기억을 유지합니다. 플레이어와의 대화, 사건 목격, 호감도 변화가 그래프에 기록되어 NPC가 살아있는 캐릭터처럼 반응합니다.
 
 ![스토리 그래프 시각화](assets/story_graph.png)
 
 ## 주요 기능
 
-- **지식 그래프 기반 테마 빌더** — 세계관 문서를 청킹 → 지식 그래프 추출 → 병합 → 테마 JSON 자동 생성
+- **지식 그래프 기반 테마 빌더** — 세계관 문서를 청킹 → 지식 그래프 추출 → 병합 → 테마 JSON + NPC 프로필 자동 생성
+- **NPC 대화 시스템** — 성격/말투/호감도를 가진 NPC와 1:1 자유 대화. 아이템 지급, 퀘스트 부여, 비밀 공개 등 행동 수행
+- **NPC 메모리 그래프** — 각 NPC별 독립 방향성 그래프로 대화/사건 기억. 스테이지별 격리로 몰입감 유지
+- **NPC 주도 이벤트** — 게이지/호감도/아이템 등 조건 충족 시 NPC가 먼저 말을 걸거나 퀘스트 제안
 - **범용 테마 시스템** — 코드 수정 없이 JSON만으로 완전히 다른 세계관의 게임 구동
 - **동적 월드 스테이트** — 테마 스키마가 정의하는 게이지/엔티티/컬렉션을 매 씬마다 LLM이 업데이트
 - **그래프 + 룰베이스 검증** — 그래프 이력과 월드 스테이트를 조합하여 모순 방지 (사전 지시 + 사후 검증)
@@ -47,11 +52,12 @@ WorldWeaver System은 **세계관 문서 폴더 하나만 제공하면**, AI가 
 [Theme Builder] ─── 청킹 → 청크별 지식 그래프 추출 → 병합 → 테마 JSON 생성
      │
      ▼
-[테마 JSON] ─── world_state_schema, rules, personas, initial_prompt
+[테마 JSON] ─── world_state_schema, rules, personas, npc_profiles, initial_prompt
      │
      ▼
 [Game Session]
      │
+     ├── NPCManager.get_triggered_npcs()  ◄── NPC 주도 이벤트 조건 검사
      ├── RuleEngine.pre_generation_directives()  ◄── WorldState + StoryGraph
      │        │
      │        ▼
@@ -63,7 +69,15 @@ WorldWeaver System은 **세계관 문서 폴더 하나만 제공하면**, AI가 
      │        ▼
      ├── WorldState.apply_changes()  ── 상태 업데이트
      ├── StoryGraph.add_scene()      ── 그래프 기록
-     └── LoreMemory.add_memory()     ── RAG 기억 누적
+     ├── LoreMemory.add_memory()     ── RAG 기억 누적
+     └── NPCManager.record_scene_event()  ── NPC 기억 기록
+
+     [NPC 대화 모드] (선택지에서 대화 선택 시)
+     │
+     ├── NPCMemoryGraph.to_prompt_context()  ◄── 성격 + 호감도 + 기억
+     ├── NPC Dialogue Chain (NPC 컨텍스트 + 대화 이력 → LLM → 응답)
+     ├── NPCMemoryGraph.record_dialogue()    ── 대화 기억 기록
+     └── WorldState 동기화                    ── 호감도/행동 반영
 ```
 
 ### 테마 빌더 파이프라인
@@ -80,7 +94,11 @@ WorldWeaver System은 **세계관 문서 폴더 하나만 제공하면**, AI가 
      ├── knowledge_graph.graphml 저장 (시각화 가능)
      │
      ▼
-[병합된 그래프 → LLM] → 테마 JSON 생성
+[병합된 그래프 → LLM] → 테마 JSON 생성 (NPC 프로필 포함)
+     │
+     ├── 캐릭터/세력 노드 → NPC 후보 선별 (2~5명)
+     ├── 장소 노드 연결 → 스테이지 배정 (격리 기준)
+     └── 트리거 조건 자동 설계
 ```
 
 ## 프로젝트 구조
@@ -89,24 +107,28 @@ WorldWeaver System은 **세계관 문서 폴더 하나만 제공하면**, AI가 
 WorldWeaver-System/
 ├── main.py                          # CLI 진입점 (build-theme / play)
 ├── worldweaver/                     # 핵심 엔진 패키지
-│   ├── chain.py                     # LCEL 체인 조립
+│   ├── chain.py                     # LCEL 체인 조립 (스토리 + NPC 대화)
 │   ├── config.py                    # 시스템 설정 (JSON에서 로드)
-│   ├── game.py                      # GameSession (생성→검증→상태 업데이트 루프)
+│   ├── content_filter.py            # 입력 필터 + 주제 검증 + state_change 검증
+│   ├── game.py                      # GameSession (생성→검증→상태 업데이트 + NPC 대화 모드)
 │   ├── graph.py                     # StoryGraph (NetworkX DiGraph + 이력 조회)
-│   ├── models.py                    # Pydantic 데이터 모델
+│   ├── llm_factory.py               # LLM 제공자 팩토리 (Groq, Google)
+│   ├── models.py                    # Pydantic 데이터 모델 (StoryNode + NPCDialogueResponse)
+│   ├── npc_memory.py                # NPC 메모리 그래프 (방향성 그래프 기반, 스테이지 격리)
 │   ├── persona.py                   # 페르소나 기반 선택 전략
 │   ├── prompt_loader.py             # JSON 설정 로더 (캐싱)
 │   ├── rag.py                       # LoreMemory (FAISS 벡터 스토어)
 │   ├── rule_engine.py               # 그래프 + 월드 스테이트 룰베이스 검증
-│   ├── theme_builder.py             # 지식 그래프 기반 테마 자동 생성
-│   └── world_state.py               # 스키마 기반 동적 월드 스테이트
+│   ├── theme_builder.py             # 지식 그래프 기반 테마 + NPC 자동 생성
+│   └── world_state.py               # 스키마 기반 동적 월드 스테이트 (NPC 관계도 포함)
 ├── prompts/                         # 외부화된 프롬프트/설정 (코드 수정 없이 교체 가능)
 │   ├── game_config.json             # LLM/RAG/게임 시스템 설정
 │   ├── story_template.json          # 스토리 생성 프롬프트 템플릿
+│   ├── npc_dialogue.json            # NPC 대화 생성 프롬프트 템플릿
 │   ├── rules.json                   # 공통 룰엔진 규칙
-│   ├── theme_builder.json           # 테마 빌더 프롬프트
+│   ├── theme_builder.json           # 테마 빌더 프롬프트 (NPC 생성 포함)
 │   └── themes/
-│       └── mythology.json           # 신화 테마 (예시)
+│       └── mythology.json           # 신화 테마 (NPC 3명 포함)
 ├── lore_documents/                  # 세계관 문서
 │   ├── worldbuilding.txt
 │   └── core_systems.txt
@@ -161,10 +183,11 @@ python main.py play --theme mythology --mode auto --persona hero --scenes 10
 
 ## 실행 예시
 
+### 스토리 진행
+
 ```
 테마 로드: 신화 테마 - 별자리의 수호자
-세계관 정보를 로드하여 RAG 메모리 구축 ....
-RAG 구축 완료
+NPC 대화 시스템 활성화 — 3명의 NPC 로드
 
 ========================================================
 장면 생성 중 ....
@@ -180,11 +203,34 @@ RAG 구축 완료
   캐릭터: 메두사(적대)
   아이템: 수호자의 검
 
+(이 장소의 NPC:)
+  카이론(현자) — 호감도: 우호적
+
 --- 선택지 ---
 1. 신성한 광맥에 감시탑을 건설하여 방어선을 구축한다.
 2. 별자리의 힘을 끌어와 광맥의 에너지를 증폭시킨다.
 3. 고대 기록을 되짚어 메두사의 약점을 떠올린다.
-4. 수호자의 무기를 들고 전방으로 나선다.
+4. 💬 카이론(현자)과(와) 대화하기
+```
+
+### NPC 대화
+
+```
+==================================================
+  💬 카이론(현자)과(와) 대화를 시작합니다
+  호감도: 우호적 (0.7)
+  (대화를 끝내려면 '떠나기'를 입력하세요)
+==================================================
+
+[당신] > 메두사의 석상들을 막을 방법이 있습니까?
+
+[카이론] 오래 전, 페르세우스가 그러하였듯이 직접 맞서는 것만이
+능사가 아니니라. 석상들은 메두사의 시선이 닿는 곳에서만 깨어나느니...
+그 시선을 차단할 수 있는 유물이 이 세계 어딘가에 잠들어 있다.
+아테나의 방패, 그것을 찾아보아라.
+
+  ✦ 새로운 퀘스트: 아테나의 방패를 찾아라
+  (호감도 변화: 우호적 → 깊은 신뢰)
 ```
 
 ## 새로운 테마 만들기

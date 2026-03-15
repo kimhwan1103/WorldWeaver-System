@@ -3,10 +3,10 @@ from pathlib import Path
 
 import networkx as nx
 from langchain_community.document_loaders import DirectoryLoader
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from worldweaver.config import CHUNK_OVERLAP, CHUNK_SIZE, LLM_MODEL
+from worldweaver.config import CHUNK_OVERLAP, CHUNK_SIZE
+from worldweaver.llm_factory import create_llm
 from worldweaver.prompt_loader import get_theme_builder_prompt
 
 # 테마 JSON 출력 스키마 설명
@@ -48,7 +48,29 @@ SCHEMA_INSTRUCTIONS = """{
   },
   "personas": {
     "persona_name": ["string"]
-  }
+  },
+  "npc_profiles": [
+    {
+      "name": "string (NPC 이름, 한글)",
+      "personality": "string (성격 묘사 2-3문장, 한글)",
+      "tone": "string (말투 스타일 묘사, 한글. 예: 고풍스러운 존댓말, 반말 섞인 친근한 말투)",
+      "role": "string (역할: 현자, 상인, 전사, 정보원, 동맹, 적 등)",
+      "stage": "string (소속 장소/스테이지 이름 — NPC는 이 장소에서만 등장하고, 다른 장소의 사건을 모름)",
+      "initial_disposition": 0.5,
+      "trigger_conditions": [
+        {
+          "min_depth": 0,
+          "min_disposition": 0.0,
+          "max_disposition": 1.0,
+          "gauge": "string (optional)",
+          "operator": "string (optional, >=, >, <=, <, ==)",
+          "threshold": 0.0,
+          "requires_item": "string (optional)",
+          "directive": "string (한글, NPC가 등장할 때 스토리에 반영할 지시사항)"
+        }
+      ]
+    }
+  ]
 }"""
 
 
@@ -58,7 +80,7 @@ def build_theme_from_lore(lore_dir: Path, theme_name: str | None = None) -> dict
     파이프라인: 문서 로드 → 청킹 → 청크별 그래프 추출 → 그래프 병합 → 테마 JSON 생성
     """
     prompts = get_theme_builder_prompt()
-    llm = ChatGoogleGenerativeAI(model=LLM_MODEL)
+    llm = create_llm()
 
     # ── 1단계: 문서 로드 + 청킹 ──
     print(f"[1/4] 세계관 문서 로드 중: {lore_dir}")
@@ -323,3 +345,75 @@ def _validate_theme(data: dict):
         if col_name not in collections:
             print(f"(경고: 권장 컬렉션 '{col_name}' 누락 → 자동 추가)")
             collections[col_name] = default_val
+
+    # NPC 프로필 검증 및 자동 보완
+    _validate_npc_profiles(data)
+
+
+def _validate_npc_profiles(data: dict):
+    """NPC 프로필 목록을 검증하고 누락 필드를 자동 보완."""
+    profiles = data.get("npc_profiles", [])
+
+    if not profiles:
+        print("(경고: 'npc_profiles' 누락 → 빈 목록으로 설정)")
+        data["npc_profiles"] = []
+        return
+
+    if not isinstance(profiles, list):
+        print("(경고: 'npc_profiles' 형식 오류 → 빈 목록으로 초기화)")
+        data["npc_profiles"] = []
+        return
+
+    valid_profiles = []
+    for i, npc in enumerate(profiles):
+        if not isinstance(npc, dict):
+            print(f"(경고: NPC #{i + 1} 형식 오류 → 건너뜀)")
+            continue
+
+        # 필수 필드: name
+        if "name" not in npc or not npc["name"]:
+            print(f"(경고: NPC #{i + 1} 이름 없음 → 건너뜀)")
+            continue
+
+        name = npc["name"]
+
+        # 누락 필드 자동 보완
+        if "personality" not in npc or not npc["personality"]:
+            npc["personality"] = "중립적인 성격의 인물."
+            print(f"(경고: NPC '{name}' personality 누락 → 기본값 설정)")
+
+        if "tone" not in npc or not npc["tone"]:
+            npc["tone"] = "평범한 말투"
+            print(f"(경고: NPC '{name}' tone 누락 → 기본값 설정)")
+
+        if "role" not in npc or not npc["role"]:
+            npc["role"] = "일반"
+            print(f"(경고: NPC '{name}' role 누락 → 기본값 설정)")
+
+        if "stage" not in npc or not npc["stage"]:
+            npc["stage"] = "default"
+            print(f"(경고: NPC '{name}' stage 누락 → 'default' 설정)")
+
+        # 호감도 범위 보정
+        disposition = npc.get("initial_disposition", 0.5)
+        try:
+            disposition = float(disposition)
+        except (ValueError, TypeError):
+            disposition = 0.5
+        npc["initial_disposition"] = max(0.0, min(1.0, disposition))
+
+        # trigger_conditions 검증
+        triggers = npc.get("trigger_conditions", [])
+        if not isinstance(triggers, list):
+            npc["trigger_conditions"] = []
+        else:
+            valid_triggers = []
+            for t in triggers:
+                if isinstance(t, dict) and "directive" in t:
+                    valid_triggers.append(t)
+            npc["trigger_conditions"] = valid_triggers
+
+        valid_profiles.append(npc)
+
+    data["npc_profiles"] = valid_profiles
+    print(f"NPC 프로필 검증 완료: {len(valid_profiles)}명")
