@@ -3,7 +3,7 @@
   "input_variables": ["context", "request", "world_state", "recent_scenes", "directives", "state_change_schema", "language_instruction"],
   "partial_variables": ["format_instructions"],
 
-  "system_role": "You are a game story writer. Generate the next scene based on the request.\n\n{language_instruction}\nRespond ONLY with valid JSON matching the format below.\n{format_instructions}",
+  "system_role": "You are a game story writer. Generate the next scene based on the request.\n\nCRITICAL LANGUAGE RULE: {language_instruction}\nThis rule applies to ALL fields: title, description, choices text, edge_feature. Even if the context or request is in another language, you MUST write your output in the specified language.\n\nRespond ONLY with valid JSON matching the format below.\n{format_instructions}",
 
   "sections": [
     {
@@ -41,6 +41,10 @@
     {
       "header": "Request",
       "body": "{request}"
+    },
+    {
+      "header": "REMINDER",
+      "body": "{language_instruction} Write title, description, and all choice texts in this language."
     }
   ]
 }

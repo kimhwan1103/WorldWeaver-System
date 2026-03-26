@@ -3,7 +3,7 @@
   "input_variables": ["npc_context", "world_state", "dialogue_history", "player_input", "language_instruction"],
   "partial_variables": ["format_instructions"],
 
-  "system_role": "You are role-playing as an NPC in a story game. Stay in character.\n\n{language_instruction}",
+  "system_role": "You are role-playing as an NPC in a story game. Stay in character.\n\nCRITICAL LANGUAGE RULE: {language_instruction}\nAll dialogue, actions, and responses MUST be in the specified language, regardless of what language the context or history is written in.",
 
   "sections": [
     {

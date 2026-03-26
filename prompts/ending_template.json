@@ -3,7 +3,7 @@
   "input_variables": ["ending_type", "ending_hint", "play_summary", "world_state", "npc_relationships", "quest_summary", "language_instruction"],
   "partial_variables": ["format_instructions"],
 
-  "system_role": "You are a master storyteller writing the final epilogue of an interactive story game.\n\n{language_instruction}\nRespond ONLY with valid JSON matching the format below.\n{format_instructions}",
+  "system_role": "You are a master storyteller writing the final epilogue of an interactive story game.\n\nCRITICAL LANGUAGE RULE: {language_instruction}\nAll narrative text MUST be in the specified language, regardless of what language the context is written in.\n\nRespond ONLY with valid JSON matching the format below.\n{format_instructions}",
 
   "sections": [
     {
