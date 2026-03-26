@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from langchain_community.document_loaders import DirectoryLoader
+from langchain_community.document_loaders import DirectoryLoader, TextLoader
 from langchain_community.vectorstores import FAISS
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -19,7 +19,7 @@ class LoreMemory:
 
         embeddings = GoogleGenerativeAIEmbeddings(model=EMBEDDING_MODEL)
 
-        loader = DirectoryLoader(str(lore_dir), glob="**/*.txt")
+        loader = DirectoryLoader(str(lore_dir), glob="**/*.txt", loader_cls=TextLoader)
         docs = loader.load()
 
         splitter = RecursiveCharacterTextSplitter(
