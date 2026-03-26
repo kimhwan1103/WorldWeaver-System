@@ -1,6 +1,46 @@
 {
-  "description": "스토리 씬 생성을 위한 범용 LLM 프롬프트 템플릿",
-  "template": "You are a genius game story writer. Please refer to the information provided below to create a continuous story for the current 'Request'. Write the story in Korean.\nThe response must be in the JSON format below.\n\n### Important Creative Instructions ###\nWhen creating a \"choices\" list, adjust the number of choices based on your own judgment of the importance of the given request ({request}).\n- If the scene is a major turning point in the story or is very dramatic, create four or five deep choices.\n- If the scene is a relatively simple situation, create only two or three choices.\n- When the story progresses, try to make it fit with the content before and after as much as possible.\n- Please make the story into chapters.\n- When creating a story, be as detailed and thoughtful as possible.\n- If an NPC is present in the scene, you may include a dialogue choice with choice_type 'dialogue' and the NPC's name in 'npc_name'. This allows the player to talk to the NPC.\n- NPCs should feel like living characters with their own motivations. Describe their presence naturally in the scene narrative.\n- When enemies appear in the scene, include a combat choice with choice_type 'combat' and the enemy's name in 'enemy_name'. This triggers a combat encounter.\n- Combat encounters should feel earned — describe the threat building up before presenting the combat choice.\n\n### CRITICAL: World State Rules ###\nYou MUST respect the current world state below. Do NOT contradict it.\n- Entities marked with a removed status (e.g. eliminated, sealed) cannot appear alive in the scene.\n- If an item is not in the player's collections, the player cannot use it.\n- Reflect the current gauge values in the story tone and urgency.\n- The \"state_change\" field MUST accurately describe what changed in THIS scene using the schema below.\n\n### state_change Schema ###\n{state_change_schema}\n\n{directives}\n\n{format_instructions}\n\n### Current World State ###\n{world_state}\n\n### Recent Story Flow ###\n{recent_scenes}\n\n### Key Worldview and Past Records (Context) ###\n{context}\n\n### Current Request ###\n{request}",
-  "input_variables": ["context", "request", "world_state", "recent_scenes", "directives", "state_change_schema"],
-  "partial_variables": ["format_instructions"]
+  "description": "스토리 씬 생성 프롬프트 (섹션별 분리 + 다국어)",
+  "input_variables": ["context", "request", "world_state", "recent_scenes", "directives", "state_change_schema", "language_instruction"],
+  "partial_variables": ["format_instructions"],
+
+  "system_role": "You are a game story writer. Generate the next scene based on the request.\n\n{language_instruction}\nRespond ONLY with valid JSON matching the format below.\n{format_instructions}",
+
+  "sections": [
+    {
+      "header": "Rules",
+      "body": [
+        "2-5 choices per scene. More for dramatic moments, fewer for simple ones.",
+        "Respect world state: removed entities stay removed, items must be in inventory to use.",
+        "state_change must reflect what changed in THIS scene.",
+        "For NPCs in scene: add choice with choice_type 'dialogue', npc_name set.",
+        "For enemies in scene: add choice with choice_type 'combat', enemy_name set.",
+        "Mark dangerous/challenging choices with 'risky': true. These are choices where failure is possible — climbing cliffs, resisting dark power, navigating traps, persuading hostile NPCs, etc. At least 1 risky choice per scene when the situation is tense."
+      ]
+    },
+    {
+      "header": "state_change Schema",
+      "body": "{state_change_schema}"
+    },
+    {
+      "header": "Directives",
+      "body": "{directives}",
+      "raw": true
+    },
+    {
+      "header": "World State",
+      "body": "{world_state}"
+    },
+    {
+      "header": "Recent Scenes",
+      "body": "{recent_scenes}"
+    },
+    {
+      "header": "Context",
+      "body": "{context}"
+    },
+    {
+      "header": "Request",
+      "body": "{request}"
+    }
+  ]
 }

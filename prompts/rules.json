@@ -1,24 +1,24 @@
 {
-  "description": "테마 공통 룰엔진 규칙 (테마별 게이지/절정 규칙은 각 테마 JSON에 정의)",
+  "description": "Common rule engine rules (theme-specific gauge/climax rules are defined in each theme JSON)",
   "max_retry": 2,
   "pre_generation": {
-    "removed_entity": "다음 엔티티는 이미 제거된 상태이므로 절대 재등장시키지 마세요: {entities}",
-    "mood_repeat": "최근 {count}개 씬의 분위기가 모두 '{mood}'입니다. 반드시 다른 분위기로 전환하세요.",
-    "hook_resolve": "미회수 복선을 회수할 시점입니다. 다음 복선을 스토리에 반영하세요: '{hook}'"
+    "removed_entity": "The following entities have been removed and MUST NOT reappear: {entities}",
+    "mood_repeat": "The last {count} scenes all had mood '{mood}'. You MUST switch to a different mood.",
+    "hook_resolve": "It is time to resolve an unresolved plot hook. Incorporate this into the story: '{hook}'"
   },
   "thresholds": {
     "mood_repeat_count": 3,
     "hook_resolve_depth": 5
   },
   "validation": {
-    "removed_entity_violation": "'{name}'은(는) 이미 제거된 상태이지만 새 씬에 등장했습니다. 이 엔티티를 제거하거나 회상/과거 장면으로만 언급하세요.",
-    "resolved_event_warning": "'{event}'은(는) 이미 해결된 사건입니다. 새로 발견하는 것처럼 서술하지 마세요.",
-    "mood_repeat_warning": "분위기 '{mood}'가 연속 반복됩니다. 다양한 분위기를 시도하세요.",
-    "min_choices_warning": "선택지가 2개 미만입니다. 최소 2개의 선택지를 제공하세요.",
+    "removed_entity_violation": "'{name}' has been removed but appeared in the new scene. Remove this entity or mention only as flashback/memory.",
+    "resolved_event_warning": "'{event}' has already been resolved. Do not describe it as newly discovered.",
+    "mood_repeat_warning": "Mood '{mood}' is repeating consecutively. Try a different mood.",
+    "min_choices_warning": "Fewer than 2 choices provided. Include at least 2 choices.",
     "min_choices": 2
   },
   "retry": {
-    "violation_header": "### CRITICAL: 이전 생성에서 다음 규칙 위반이 발견되었습니다. 반드시 수정하세요. ###",
-    "warning_header": "### 경고 (가능하면 반영하세요) ###"
+    "violation_header": "### CRITICAL: The previous generation violated the following rules. You MUST fix them. ###",
+    "warning_header": "### WARNINGS (address if possible) ###"
   }
 }

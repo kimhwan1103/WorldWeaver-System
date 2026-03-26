@@ -1,8 +1,14 @@
 {
   "description": "시스템 공통 설정 (테마 독립적)",
+  "supported_languages": {
+    "ko": "Write ALL narrative, dialogue, choices, and descriptions in Korean(한국어).",
+    "en": "Write ALL narrative, dialogue, choices, and descriptions in English.",
+    "ja": "Write ALL narrative, dialogue, choices, and descriptions in Japanese(日本語)."
+  },
+  "default_language": "ko",
   "llm": {
-    "provider": "groq",
-    "model": "qwen/qwen3-32b",
+    "provider": "google",
+    "model": "gemini-3.1-flash-lite-preview",
     "embedding_provider": "google",
     "embedding_model": "models/gemini-embedding-001"
   },

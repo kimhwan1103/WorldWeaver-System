@@ -41,4 +41,19 @@ def create_llm() -> BaseChatModel:
 
     llm_class = _PROVIDERS[provider]
     print(f"LLM 로드: {provider} / {model}")
-    return llm_class(model=model)
+
+    # Groq 제공자: max_tokens 명시 설정 (기본값이 낮아 JSON이 잘리는 문제 방지)
+    extra_kwargs: dict = {}
+    if provider == "groq":
+        extra_kwargs["max_tokens"] = cfg.get("max_tokens", 8192)
+
+    # Qwen3 모델의 thinking 모드 비활성화
+    # thinking에 출력 토큰을 전부 소모하여 JSON을 출력하지 않는 문제 방지
+    if "qwen" in model.lower():
+        return llm_class(
+            model=model,
+            reasoning_format="hidden",
+            **extra_kwargs,
+        )
+
+    return llm_class(model=model, **extra_kwargs)

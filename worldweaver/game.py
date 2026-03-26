@@ -49,7 +49,10 @@ class GameSession:
     def _load_topic_filter(self, theme: dict) -> TopicFilter:
         """테마의 지식 그래프를 로드하여 TopicFilter를 생성."""
         lore_dir = Path(theme.get("lore_dir", "lore_documents"))
-        kg_path = lore_dir.parent / "knowledge_graph.graphml"
+        # 테마별 lore_dir 내부 → 이전 호환(parent) 순으로 탐색
+        kg_path = lore_dir / "knowledge_graph.graphml"
+        if not kg_path.exists():
+            kg_path = lore_dir.parent / "knowledge_graph.graphml"
 
         if kg_path.exists():
             try:
@@ -373,6 +376,11 @@ class GameSession:
         print(f"  (대화를 끝내려면 '떠나기'를 입력하세요)")
         print(f"{'='*50}")
 
+        # NPC가 먼저 인사
+        greeting = self._get_npc_greeting(npc)
+        if greeting:
+            print(f"\n[{npc.profile.name}] {greeting}")
+
         while True:
             player_input = input(f"\n[당신] > ").strip()
             if not player_input or player_input == "떠나기":
@@ -448,6 +456,30 @@ class GameSession:
         # 대화 종료 후 호감도를 월드 스테이트에 반영
         self._sync_npc_disposition(npc)
 
+    def _get_npc_greeting(self, npc) -> str | None:
+        """NPC가 먼저 건네는 인사말을 LLM으로 생성."""
+        if not self.npc_dialogue_chain:
+            return None
+
+        dialogue_history = npc.get_dialogue_history(self._current_stage)
+        history_text = "\n".join(m["content"] for m in dialogue_history) if dialogue_history else "(첫 대화)"
+
+        chain_input = {
+            "npc_context": npc.to_prompt_context(),
+            "world_state": self.world_state.to_prompt_string(),
+            "dialogue_history": history_text,
+            "player_input": "(플레이어가 다가옵니다. NPC로서 먼저 말을 걸어 대화를 시작하세요.)",
+        }
+
+        try:
+            result = self.npc_dialogue_chain.invoke(chain_input)
+            greeting = result.get("response", "")
+            if greeting:
+                npc.record_dialogue("(접근)", greeting, self._current_stage)
+            return greeting
+        except Exception:
+            return None
+
     def _handle_npc_action(self, npc, action: str, detail: str):
         """NPC 행동을 월드 스테이트에 반영."""
         if action == "give_item" and detail:
@@ -495,7 +527,7 @@ class GameSession:
                 continue
 
             choices.append({
-                "text": f"💬 {npc.profile.name}({npc.profile.role})과(와) 대화하기",
+                "text": f"💬 Talk to {npc.profile.name} ({npc.profile.role})",
                 "edge_feature": "Diplomatic",
                 "next_node_prompt": directive,
                 "choice_type": "dialogue",
@@ -507,17 +539,21 @@ class GameSession:
     # ── 스테이지 추적 ──
 
     def _detect_stage(self, node_data: dict) -> str:
-        """씬 데이터에서 현재 스테이지(장소)를 추론."""
-        title = node_data.get("title", "")
-        description = node_data.get("description", "")
+        """씬 데이터에서 현재 스테이지를 추론. 테마 stages의 다국어 키워드로 매칭."""
+        scene_text = f"{node_data.get('title', '')} {node_data.get('description', '')}".lower()
+        stages = self.theme.get("stages", {})
 
-        # 테마의 NPC 스테이지 목록에서 매칭
-        for npc in self.npc_manager.get_all_npcs().values():
-            stage = npc.profile.stage
-            if stage in title or stage in description:
-                return stage
+        best_stage = None
+        best_score = 0
 
-        return self._current_stage
+        for stage_name, stage_cfg in stages.items():
+            keywords = stage_cfg.get("keywords", [])
+            score = sum(1 for kw in keywords if kw.lower() in scene_text)
+            if score > best_score:
+                best_score = score
+                best_stage = stage_name
+
+        return best_stage if best_stage and best_score > 0 else self._current_stage
 
     # ── 핵심: 생성 → 검증 → 재생성 루프 ──
 

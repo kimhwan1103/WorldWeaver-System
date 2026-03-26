@@ -1,0 +1,374 @@
+{
+  "name": "synapse_collapse",
+  "display_name": "기억의 파편: 마지막 기록자",
+  "description": "붕괴해가는 인류 최후의 기록 보관소, '시냅스'의 심장부로 뛰어들어 흩어진 기억을 구원하는 서사적 탐험.",
+  "initial_prompt": "지평선 너머 모든 지식이 사라진 2147년, 당신은 인류의 마지막 유산인 '시냅스'에 접속했습니다. 금이 간 유리 조각처럼 부서진 기억들이 공중에 흩날리고, 그 사이로 정체불명의 붉은 얼룩이 세계를 잠식하고 있습니다. 당신의 등 뒤로 차가운 데이터의 바람이 불어오고, 무너져가는 세상의 끝에서 당신의 선택이 인류의 최종 기록을 결정합니다. 이제 깨어날 시간입니다, 기록자여.",
+  "lore_dir": "lore_documents\\synapse_collapse",
+  "world_state_schema": {
+    "entities": {
+      "기억의 파편": {
+        "label": "회수된 기억 조각",
+        "description": "당신이 수집한 인류의 소중한 감정과 사건의 기록들입니다.",
+        "removed_statuses": [
+          "소멸됨",
+          "오염되어 읽을 수 없음"
+        ]
+      }
+    },
+    "gauges": {
+      "침식의 흔적": {
+        "label": "세계의 침식도",
+        "description": "붉은 얼룩이 세계를 얼마나 집어삼켰는지를 나타냅니다. 1.0에 도달하면 모든 기록이 영원히 사라집니다.",
+        "min": 0.0,
+        "max": 1.0,
+        "default": 0.0
+      },
+      "의식의 선명도": {
+        "label": "기억의 명료함",
+        "description": "당신이 얼마나 진실에 가까이 다가갔는지 측정하는 지표입니다.",
+        "min": 0.0,
+        "max": 1.0,
+        "default": 0.0
+      },
+      "생명의 불꽃": {
+        "label": "기록자의 생명력",
+        "description": "기록자인 당신의 활동 가능한 에너지입니다. 0이 되면 기록은 중단됩니다.",
+        "min": 0.0,
+        "max": 1.0,
+        "default": 1.0
+      },
+      "health": {
+        "label": "생명력",
+        "description": "전투에서 데미지를 받으면 감소",
+        "min": 0.0,
+        "max": 1.0,
+        "default": 1.0
+      }
+    },
+    "properties": {
+      "현재_상태": {
+        "label": "기록자의 의지",
+        "description": "당신이 지금 품고 있는 마음가짐의 방향성입니다.",
+        "default": "관조자"
+      }
+    },
+    "collections": {
+      "기억의 조각들": {
+        "label": "보관된 기억",
+        "description": "당신이 세계 곳곳에서 수집한 인류의 파편화된 역사들입니다."
+      },
+      "잊혀진 길": {
+        "label": "방문한 구역",
+        "description": "당신이 이미 발을 들였던 시냅스의 영역들입니다."
+      },
+      "inventory": {
+        "label": "보유 아이템",
+        "description": "보유한 아이템 목록"
+      },
+      "resolved_events": {
+        "label": "해결된 사건",
+        "description": "해결된 사건 목록"
+      },
+      "unresolved_hooks": {
+        "label": "미회수 복선",
+        "description": "미회수 복선 목록"
+      }
+    }
+  },
+  "rules": {
+    "gauge_rules": [
+      {
+        "gauge": "침식의 흔적",
+        "operator": ">=",
+        "threshold": 0.8,
+        "directive": "화면 가장자리가 붉게 번지며, 서술되는 문장마다 비명과도 같은 노이즈가 섞여 나옵니다."
+      }
+    ],
+    "climax_rules": [
+      {
+        "min_depth": 8,
+        "gauge": "의식의 선명도",
+        "operator": ">=",
+        "threshold": 0.7,
+        "directive": "시냅스의 심장부에서 모든 기억이 하나로 합쳐지는 거대한 빛의 소용돌이가 펼쳐집니다."
+      }
+    ]
+  },
+  "personas": {
+    "기억의 수호자": [
+      "과거의 아름다웠던 시절을 그리워하는 보존주의자",
+      "무너져가는 현재를 슬퍼하며 침묵을 지키는 존재"
+    ],
+    "냉철한 분석가": [
+      "오직 효율적인 해결책만을 추구하는 냉혹한 의지",
+      "감정을 배제하고 불필요한 기억을 도려내야 한다고 믿는 존재"
+    ]
+  },
+  "npc_profiles": [
+    {
+      "name": "에코",
+      "personality": "언어의 패턴만을 흉내 내는 미완의 존재입니다. 당신이 하는 말을 거울처럼 따라 하며, 때때로 슬픈 기억의 파편을 흘립니다.",
+      "tone": "무미건조하지만 기묘한 울림이 있는 말투.",
+      "role": "정보원",
+      "stage": "커널 경계",
+      "initial_disposition": 0.5,
+      "trigger_conditions": [
+        {
+          "min_depth": 2,
+          "min_disposition": 0.5,
+          "max_disposition": 1.0,
+          "directive": "에코가 당신의 눈을 똑바로 응시하며, 방금 당신이 겪었던 기억의 일부를 자신의 목소리로 다시 읊어줍니다."
+        }
+      ]
+    },
+    {
+      "name": "아노말리",
+      "personality": "홀로그램의 형태를 띤 잊혀진 인간의 의식입니다. 자신의 존재 이유를 찾고 있으며, 기억의 끝에서 구원을 갈구합니다.",
+      "tone": "간절하면서도 금방이라도 사라질 듯한 가냘픈 목소리.",
+      "role": "동맹",
+      "stage": "중앙 코어",
+      "initial_disposition": 0.7,
+      "trigger_conditions": [
+        {
+          "min_depth": 5,
+          "min_disposition": 0.6,
+          "directive": "아노말리가 빛나는 데이터의 줄기를 뻗어 당신의 손을 잡습니다. 그 온기를 통해 잊고 있었던 인류의 따뜻한 기억이 전해집니다."
+        }
+      ]
+    }
+  ],
+  "stages": {
+    "커널 경계": {
+      "keywords": [
+        "고요",
+        "격자무늬",
+        "시작점"
+      ],
+      "is_default": true,
+      "layer": 1,
+      "description": "모든 것이 시작되는 강직한 격자 구조의 영역입니다. 차가운 회색빛이 감돌고 있습니다.",
+      "connects_to": [
+        "중앙 코어"
+      ],
+      "unlock": {}
+    },
+    "중앙 코어": {
+      "keywords": [
+        "빛",
+        "기억의 소용돌이",
+        "종말"
+      ],
+      "is_default": false,
+      "layer": 2,
+      "description": "인류의 기억이 압축되어 흐르는 시냅스의 심장부입니다. 찬란한 빛과 어둠이 교차합니다.",
+      "connects_to": [
+        "커널 경계"
+      ],
+      "unlock": {}
+    }
+  },
+  "item_effects": {
+    "기억의 파편": {
+      "description": "누군가의 소중한 어린 시절 기억이 담긴 빛나는 조각입니다.",
+      "base_effect": {
+        "attack": 0,
+        "defense": 0,
+        "max_hp": 5,
+        "heal": 10
+      },
+      "hidden_effect": {
+        "attack": 2,
+        "defense": 0,
+        "max_hp": 0,
+        "heal": 0
+      },
+      "npc_affinity": {
+        "아노말리": {
+          "disposition_delta": 0.1,
+          "reaction": "respectful"
+        }
+      }
+    }
+  },
+  "titles": [
+    {
+      "id": "reconstructor",
+      "name": "기억의 재건자",
+      "description": "파편화된 기억을 5개 이상 온전히 복원했을 때 주어지는 칭호입니다.",
+      "conditions": {
+        "entities_removed_min": 0,
+        "min_hidden_discovered": 5
+      },
+      "bonus": {
+        "attack": 5,
+        "defense": 2,
+        "max_hp": 20
+      }
+    }
+  ],
+  "enemies": [
+    {
+      "name": "붉은 얼룩",
+      "hp": 40,
+      "attack": 8,
+      "defense": 2,
+      "description": "시스템을 야금야금 갉아먹는 적대적인 붉은 데이터 덩어리입니다. 가까이 다가갈수록 신경을 긁는 소음이 들립니다.",
+      "abilities": [
+        {
+          "name": "잠식하는 악의",
+          "damage": 10,
+          "chance": 0.2
+        }
+      ],
+      "loot": [
+        "오염된 기록 조각"
+      ],
+      "stage": "커널 경계"
+    },
+    {
+      "name": "기억의 기사",
+      "hp": 70,
+      "attack": 12,
+      "defense": 5,
+      "description": "깨진 유리 파편으로 몸을 치장한 차가운 감시자입니다. 무언가를 지키려는 듯 비정상적인 칼날을 휘두릅니다.",
+      "abilities": [
+        {
+          "name": "수정 칼날 일격",
+          "damage": 15,
+          "chance": 0.3
+        }
+      ],
+      "loot": [
+        "부서진 검의 파편"
+      ],
+      "stage": "중앙 코어"
+    }
+  ],
+  "endings": [
+    {
+      "id": "truth_seeker",
+      "priority": 1,
+      "conditions": {
+        "min_depth": 10,
+        "gauges": {
+          "의식의 선명도": {
+            "op": ">=",
+            "value": 0.8
+          }
+        }
+      },
+      "prompt_hint": "The player integrates with the ANOMALY, choosing to preserve humanity's memory at the cost of their own identity as a Debugger."
+    }
+  ],
+  "game_over_conditions": [
+    {
+      "id": "system_wiped",
+      "condition": {
+        "gauges": {
+          "생명의 불꽃": {
+            "op": "<=",
+            "value": 0.0
+          }
+        }
+      },
+      "cause": "기억의 흐름을 견디지 못하고 당신의 의식이 시스템 속으로 흩어졌습니다.",
+      "prompt_hint": "The screen fades to black, leaving only the sound of a heartbeat monitor stopping."
+    }
+  ],
+  "translations": {
+    "en": {
+      "display_name": "Fragment of Memory: The Last Chronicler",
+      "description": "An epic exploration where you dive into the heart of 'Synapse,' the collapsing final archive of humanity, to salvage scattered memories.",
+      "initial_prompt": "It is 2147, and all knowledge beyond the horizon has vanished. You have connected to 'Synapse,' the final legacy of the human race. Memories, shattered like shards of broken glass, drift through the air, while a mysterious red stain consumes the world from within. A cold wind of data gusts against your back; here, at the edge of a crumbling reality, your choices will dictate the final record of mankind. It is time to awaken, Chronicler.",
+      "gauges.침식의 흔적.label": "World Erosion",
+      "gauges.침식의 흔적.description": "Indicates how much of the world has been consumed by the red stain. Upon reaching 1.0, all records will be lost forever.",
+      "gauges.의식의 선명도.label": "Memory Clarity",
+      "gauges.의식의 선명도.description": "A metric measuring how close you are to reaching the truth.",
+      "gauges.생명의 불꽃.label": "Chronicler's Vitality",
+      "gauges.생명의 불꽃.description": "The energy available for your actions as the Chronicler. If it reaches 0, the recording ends.",
+      "gauges.health.label": "Vitality",
+      "gauges.health.description": "Decreases when taking damage in combat.",
+      "properties.현재_상태.label": "Chronicler's Will",
+      "properties.현재_상태.description": "The current direction of your mindset and resolve.",
+      "collections.기억의 조각들.label": "Archived Memories",
+      "collections.기억의 조각들.description": "The fragmented histories of humanity you have collected from across the world.",
+      "collections.잊혀진 길.label": "Visited Sectors",
+      "collections.잊혀진 길.description": "The areas of Synapse you have already explored.",
+      "collections.inventory.label": "Inventory",
+      "collections.inventory.description": "List of items in your possession.",
+      "collections.resolved_events.label": "Resolved Events",
+      "collections.resolved_events.description": "List of events that have been resolved.",
+      "collections.unresolved_hooks.label": "Unresolved Threads",
+      "collections.unresolved_hooks.description": "List of plot threads left pending.",
+      "npc.에코.name": "Echo",
+      "npc.에코.personality": "An incomplete entity that merely mimics the patterns of language. It mirrors your words like a reflection, occasionally leaking fragments of sorrowful memories.",
+      "npc.에코.tone": "Dry and monotonous, yet carrying an eerie resonance.",
+      "npc.에코.role": "Informant",
+      "npc.에코.trigger.0.directive": "Echo stares straight into your eyes, reciting a fragment of the memory you just experienced in its own voice.",
+      "npc.아노말리.name": "Anomaly",
+      "npc.아노말리.personality": "A forgotten human consciousness taking the form of a hologram. It searches for its purpose and craves salvation at the end of memory.",
+      "npc.아노말리.tone": "A desperate, frail voice that sounds as if it could fade away at any moment.",
+      "npc.아노말리.role": "Ally",
+      "npc.아노말리.trigger.0.directive": "Anomaly reaches out with glowing ribbons of data to take your hand. Through that warmth, you feel the forgotten, gentle memories of humanity.",
+      "enemies.붉은 얼룩.name": "Crimson Stain",
+      "enemies.붉은 얼룩.description": "A hostile mass of red data that slowly gnaws at the system. The closer you get, the more you hear a grating, nerve-racking noise.",
+      "enemies.붉은 얼룩.abilities.잠식하는 악의": "Corrosive Malice",
+      "enemies.붉은 얼룩.loot.오염된 기록 조각": "Corrupted Record Fragment",
+      "enemies.기억의 기사.name": "Knight of Memory",
+      "enemies.기억의 기사.description": "A cold sentinel adorned in shards of broken glass. It wields an abnormal blade as if guarding something precious.",
+      "enemies.기억의 기사.abilities.수정 칼날 일격": "Crystal Blade Strike",
+      "enemies.기억의 기사.loot.부서진 검의 파편": "Shattered Sword Fragment",
+      "stages.커널 경계": "Kernel Boundary",
+      "stages.중앙 코어": "Central Core",
+      "rules.gauge_rules.0.directive": "The edges of the screen bleed with red, and every narrated sentence is laced with noise that sounds like a scream.",
+      "rules.climax_rules.0.directive": "A massive vortex of light unfolds at the heart of the synapse, where all memories converge into one."
+    },
+    "ja": {
+      "display_name": "記憶の断片：最後の記録者",
+      "description": "崩壊ゆく人類最後の記録保管所「シナプス」の深淵へ飛び込み、散逸した記憶を救い出す壮大な探索。",
+      "initial_prompt": "地平線の彼方からすべての知識が消え失せた2147年。あなたは人類最後の遺産「シナプス」へと接続した。ひび割れたガラスのように砕け散った記憶が空中に舞い、その合間を縫って正体不明の赤い染みが世界を侵食していく。背後から吹き付ける冷たいデータの風。崩壊する世界の果てで、あなたの選択が人類の最終記録を決定づける。さあ、目覚めの時だ。記録者よ。",
+      "gauges.침식의 흔적.label": "世界の侵食度",
+      "gauges.침식의 흔적.description": "赤い染みが世界をどれほど飲み込んだかを示します。1.0に達すると、すべての記録が永遠に失われます。",
+      "gauges.의식의 선명도.label": "記憶の明瞭度",
+      "gauges.의식의 선명도.description": "あなたがどれほど真実に近づいているかを測定する指標です。",
+      "gauges.생명의 불꽃.label": "記録者の生命力",
+      "gauges.생명의 불꽃.description": "記録者であるあなたの活動可能エネルギーです。0になると記録は中断されます。",
+      "gauges.health.label": "生命力",
+      "gauges.health.description": "戦闘でダメージを受けると減少します。",
+      "properties.현재_상태.label": "記録者の意志",
+      "properties.현재_상태.description": "あなたが今抱いている心構えの方向性です。",
+      "collections.기억의 조각들.label": "保管された記憶",
+      "collections.기억의 조각들.description": "あなたが世界各地で収集した、人類の断片的な歴史です。",
+      "collections.잊혀진 길.label": "訪問した領域",
+      "collections.잊혀진 길.description": "あなたがすでに足を踏み入れたシナプスの領域です。",
+      "collections.inventory.label": "所持アイテム",
+      "collections.inventory.description": "所持しているアイテムのリストです。",
+      "collections.resolved_events.label": "解決済みの事象",
+      "collections.resolved_events.description": "解決済みのイベントリストです。",
+      "collections.unresolved_hooks.label": "未回収の伏線",
+      "collections.unresolved_hooks.description": "未回収の伏線リストです。",
+      "npc.에코.name": "エコー",
+      "npc.에코.personality": "言語のパターンのみを模倣する未完成の存在。あなたの言葉を鏡のように鸚鵡返しにし、時折、悲しい記憶の欠片をこぼします。",
+      "npc.에코.tone": "無機質だが、どこか奇妙な響きを帯びた口調。",
+      "npc.에코.role": "情報屋",
+      "npc.에코.trigger.0.directive": "エコーがあなたの目をまっすぐに見つめ、先ほどあなたが体験した記憶の一部を、自身の声で語り直します。",
+      "npc.아노말리.name": "アノマリー",
+      "npc.아노말리.personality": "ホログラムの姿をした、忘れ去られし人間の意識。自らの存在意義を求めており、記憶の果てで救いを渇望しています。",
+      "npc.아노말리.tone": "切実でありながら、今にも消えてしまいそうな儚い声。",
+      "npc.아노말리.role": "同盟者",
+      "npc.아노말리.trigger.0.directive": "アノマリーが輝くデータの筋を伸ばし、あなたの手を取ります。その温もりを通じて、忘れていた人類の温かな記憶が伝わってきます。",
+      "enemies.붉은 얼룩.name": "赤い染み",
+      "enemies.붉은 얼룩.description": "システムを少しずつ侵食する、敵対的な赤いデータの塊。近づくほど、神経を逆なでするようなノイズが聞こえます。",
+      "enemies.붉은 얼룩.abilities.잠식하는 악의": "侵食する悪意",
+      "enemies.붉은 얼룩.loot.오염된 기록 조각": "汚染された記録の欠片",
+      "enemies.기억의 기사.name": "記憶の騎士",
+      "enemies.기억의 기사.description": "砕けたガラスの破片で身を纏った冷徹な監視者。何かを守ろうとしているかのように、異様な刃を振るいます。",
+      "enemies.기억의 기사.abilities.수정 칼날 일격": "水晶刃の一撃",
+      "enemies.기억의 기사.loot.부서진 검의 파편": "砕けた剣の破片",
+      "stages.커널 경계": "カーネル境界",
+      "stages.중앙 코어": "中央コア",
+      "rules.gauge_rules.0.directive": "画面の縁が赤く染まり、語られる文章ごとに悲鳴のようなノイズが混ざり合います。",
+      "rules.climax_rules.0.directive": "シナプスの深部にて、あらゆる記憶がひとつに融合する巨大な光の渦が広がります。"
+    }
+  }
+}

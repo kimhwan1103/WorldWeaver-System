@@ -69,8 +69,8 @@ class RuleEngine:
                 common_pre["mood_repeat"].format(count=mood_count, mood=recent_moods[0])
             )
 
-        # 테마별 절정 규칙
-        depth = self.graph.get_depth()
+        # 테마별 절정 규칙 (전투 노드 제외한 순수 서사 깊이 기준)
+        depth = self.graph.get_story_depth()
         for rule in self._theme_rules.get("climax_rules", []):
             if depth < rule["min_depth"]:
                 continue

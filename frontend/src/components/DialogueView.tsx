@@ -1,6 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import type { NPCAction } from "../api/types";
+import type { Language } from "../i18n";
+import { t } from "../i18n";
+import TypewriterText from "./TypewriterText";
+import MarkdownText from "./MarkdownText";
 
 interface Message {
   sender: "player" | "npc";
@@ -11,6 +15,7 @@ interface Message {
 }
 
 interface Props {
+  lang: Language;
   npcName: string;
   npcRole: string;
   dispositionLabel: string;
@@ -21,7 +26,7 @@ interface Props {
 }
 
 export default function DialogueView({
-  npcName, npcRole, dispositionLabel, messages, loading, onSend, onLeave,
+  lang, npcName, npcRole, dispositionLabel, messages, loading, onSend, onLeave,
 }: Props) {
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -37,6 +42,17 @@ export default function DialogueView({
     setInput("");
   };
 
+  const renderAction = (action: NPCAction) => {
+    switch (action.type) {
+      case "give_item": return t(lang, "actionGiveItem", { npc: npcName, item: action.item || "" });
+      case "give_quest": return t(lang, "actionGiveQuest", { quest: action.quest || "" });
+      case "reveal_info": return t(lang, "actionRevealInfo", { info: action.info || "" });
+      case "refuse": return t(lang, "actionRefuse", { npc: npcName });
+      case "attack": return t(lang, "actionAttack", { npc: npcName });
+      default: return null;
+    }
+  };
+
   return (
     <div className="dialogue-view">
       <div className="dialogue-header">
@@ -45,7 +61,7 @@ export default function DialogueView({
           <span className="npc-role">{npcRole}</span>
           <span className="npc-disposition">{dispositionLabel}</span>
         </div>
-        <button className="leave-btn" onClick={onLeave}>떠나기</button>
+        <button className="leave-btn" onClick={onLeave}>{t(lang, "leave")}</button>
       </div>
 
       <div className="dialogue-messages">
@@ -58,20 +74,24 @@ export default function DialogueView({
             transition={{ duration: 0.3 }}
           >
             <div className="message-sender">
-              {msg.sender === "player" ? "당신" : npcName}
+              {msg.sender === "player" ? t(lang, "you") : npcName}
             </div>
-            <div className="message-text">{msg.text}</div>
+            <div className="message-text">
+              {msg.sender === "npc" && i === messages.length - 1 ? (
+                <TypewriterText text={msg.text} speed={20} />
+              ) : msg.sender === "npc" ? (
+                <MarkdownText text={msg.text} />
+              ) : (
+                msg.text
+              )}
+            </div>
             {msg.action && (
-              <div className="message-action">
-                {msg.action.type === "give_item" && `✦ ${npcName}이(가) '${msg.action.item}'을(를) 건네줍니다!`}
-                {msg.action.type === "give_quest" && `✦ 새로운 퀘스트: ${msg.action.quest}`}
-                {msg.action.type === "reveal_info" && `✦ 비밀: ${msg.action.info}`}
-                {msg.action.type === "refuse" && `✦ ${npcName}이(가) 거절합니다.`}
-                {msg.action.type === "attack" && `✦ ${npcName}이(가) 적대적으로 변합니다!`}
-              </div>
+              <div className="message-action">{renderAction(msg.action)}</div>
             )}
             {msg.dispositionChanged && (
-              <div className="disposition-change">호감도: {msg.dispositionLabel}</div>
+              <div className="disposition-change">
+                {t(lang, "dispositionChange", { label: msg.dispositionLabel || "" })}
+              </div>
             )}
           </motion.div>
         ))}
@@ -93,11 +113,11 @@ export default function DialogueView({
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="대화를 입력하세요..."
+          placeholder={t(lang, "typeMessage")}
           disabled={loading}
           autoFocus
         />
-        <button type="submit" disabled={loading || !input.trim()}>전송</button>
+        <button type="submit" disabled={loading || !input.trim()}>{t(lang, "send")}</button>
       </form>
     </div>
   );

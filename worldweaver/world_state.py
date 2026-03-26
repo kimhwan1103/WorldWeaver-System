@@ -16,19 +16,32 @@ class WorldState:
 
         # 게이지 (corruption, seal, health 등): {"corruption": 0.0, "seal": 0.0}
         self.gauges: dict[str, float] = {}
-        self._gauge_schema: dict[str, dict] = schema.get("gauges", {})
+        raw_gauges = schema.get("gauges", {})
+        self._gauge_schema: dict[str, dict] = {
+            name: cfg if isinstance(cfg, dict) else {"label": str(cfg), "description": "", "min": 0.0, "max": 1.0, "default": 0.0}
+            for name, cfg in raw_gauges.items()
+        }
         for name, cfg in self._gauge_schema.items():
             self.gauges[name] = cfg.get("default", 0.0)
 
         # 단일 속성 (active_rift, current_era 등): {"active_rift": "없음"}
         self.properties: dict[str, str] = {}
-        self._property_schema: dict[str, dict] = schema.get("properties", {})
+        raw_properties = schema.get("properties", {})
+        self._property_schema: dict[str, dict] = {
+            name: cfg if isinstance(cfg, dict) else {"label": str(cfg), "description": "", "default": ""}
+            for name, cfg in raw_properties.items()
+        }
         for name, cfg in self._property_schema.items():
             self.properties[name] = cfg.get("default", "")
 
         # 컬렉션 (inventory, visited_locations 등): {"inventory": [...]}
         self.collections: dict[str, list[str]] = {}
-        self._collection_schema: dict[str, dict] = schema.get("collections", {})
+        raw_collections = schema.get("collections", {})
+        # LLM이 {"name": "라벨"} 형태로 생성한 경우 dict로 정규화
+        self._collection_schema: dict[str, dict] = {
+            name: cfg if isinstance(cfg, dict) else {"label": cfg, "description": cfg}
+            for name, cfg in raw_collections.items()
+        }
         for name in self._collection_schema:
             self.collections[name] = []
 
@@ -102,7 +115,7 @@ class WorldState:
         return "\n".join(lines) if lines else "(초기 상태)"
 
     # NPC 호감도 라벨 (disposition_label과 동일한 값들)
-    _NPC_DISPOSITION_LABELS = {"깊은 신뢰", "우호적", "중립", "경계", "적대적"}
+    _NPC_DISPOSITION_LABELS = {"Deep Trust", "Friendly", "Neutral", "Wary", "Hostile"}
 
     def to_summary_string(self) -> str:
         """콘솔 출력용 간결한 요약 문자열."""

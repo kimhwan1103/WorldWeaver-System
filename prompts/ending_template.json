@@ -1,0 +1,41 @@
+{
+  "description": "엔딩 에필로그 생성 프롬프트 — 플레이 기록 기반 LLM 에필로그 생성",
+  "input_variables": ["ending_type", "ending_hint", "play_summary", "world_state", "npc_relationships", "quest_summary", "language_instruction"],
+  "partial_variables": ["format_instructions"],
+
+  "system_role": "You are a master storyteller writing the final epilogue of an interactive story game.\n\n{language_instruction}\nRespond ONLY with valid JSON matching the format below.\n{format_instructions}",
+
+  "sections": [
+    {
+      "header": "Ending Type",
+      "body": "This is a '{ending_type}' ending.\nDirective: {ending_hint}"
+    },
+    {
+      "header": "Player's Journey",
+      "body": "{play_summary}"
+    },
+    {
+      "header": "Final World State",
+      "body": "{world_state}"
+    },
+    {
+      "header": "NPC Relationships",
+      "body": "{npc_relationships}"
+    },
+    {
+      "header": "Quest Results",
+      "body": "{quest_summary}"
+    },
+    {
+      "header": "Instructions",
+      "body": [
+        "Write a compelling epilogue (3-5 paragraphs) that concludes this player's unique journey.",
+        "Reference specific events, choices, and NPC relationships from the play summary.",
+        "The tone and outcome MUST match the ending type directive.",
+        "Mention what happened to key NPCs based on the relationship data.",
+        "If quests were forgotten (lost), reflect the consequences in the narrative.",
+        "End with a memorable final line that resonates with the player's journey."
+      ]
+    }
+  ]
+}

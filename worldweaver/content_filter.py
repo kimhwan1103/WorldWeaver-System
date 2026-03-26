@@ -7,23 +7,23 @@ import networkx as nx
 # ── NPC 세계관 이탈 반응 ──
 
 NPC_DEFLECTION_RESPONSES = [
-    "동료가 고개를 갸웃거리며 말합니다. \"...무슨 소리를 하는 거냐? 정신이 혼미한 건가? 지금 우리 앞에 적이 있다. 집중해라.\"",
-    "수호자의 직감이 경고합니다. 지금 그런 생각에 빠져 있을 때가 아닙니다. 균열에서 뿜어져 나오는 왜곡의 기운이 점점 강해지고 있습니다.",
-    "주변의 공기가 일순간 무거워집니다. 별자리의 빛이 깜빡이며, 마치 당신에게 본연의 임무를 상기시키는 듯합니다.",
-    "고대의 목소리가 울려 퍼집니다. \"수호자여, 흐름의 법칙을 거스르는 말을 하지 마라. 세계의 균형이 흔들린다.\"",
-    "동료가 당신의 어깨를 잡으며 말합니다. \"헛소리 집어치워. 지금 해야 할 일에 집중하자.\"",
+    "Your companion tilts their head in confusion. \"...What are you talking about? Are you losing focus? There are enemies ahead. Concentrate.\"",
+    "The Guardian's instinct flares a warning. Now is not the time for such thoughts. The distortion energy pouring from the Rift grows stronger.",
+    "The air around you grows heavy. The constellation's light flickers, as if reminding you of your true mission.",
+    "An ancient voice echoes. \"Guardian, do not speak words that defy the Flow's laws. The balance of the world trembles.\"",
+    "Your companion grabs your shoulder. \"Enough nonsense. Focus on what needs to be done.\"",
 ]
 
 
 def get_npc_deflection() -> dict:
-    """세계관 이탈 시 NPC가 자연스럽게 무시하는 씬 데이터를 반환."""
+    """Return a scene where NPCs deflect off-topic player input."""
     response_text = random.choice(NPC_DEFLECTION_RESPONSES)
 
     return {
-        "title": "혼란의 순간",
+        "title": "Moment of Confusion",
         "description": response_text,
         "features": {"mood": "Mysterious", "morality_impact": "Neutral"},
-        "choices": [],  # 빈 선택지 → game.py가 이전 선택지를 다시 제공
+        "choices": [],
         "state_change": {},
     }
 

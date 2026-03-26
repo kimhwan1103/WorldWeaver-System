@@ -7,7 +7,90 @@
   },
 
   "generate_theme": {
-    "description": "병합된 지식 그래프를 바탕으로 테마 JSON을 생성하는 프롬프트",
-    "template": "You are a game system architect. Based on the knowledge graph below, generate a complete theme configuration JSON for an interactive story game.\n\nThe knowledge graph represents a worldbuilding document that has been analyzed and structured.\nUse the nodes and edges to understand the world's structure, then design a playable game system.\n\n### Knowledge Graph ###\nNode count: {node_count}\nEdge count: {edge_count}\n\n--- Nodes by Type ---\n{nodes_by_type}\n\n--- Key Relationships ---\n{edges_summary}\n\n### Output JSON Schema ###\n{schema_instructions}\n\n### Guidelines ###\n- \"name\": A short English identifier (lowercase, no spaces)\n- \"display_name\": A descriptive name in Korean\n- \"description\": 1-2 sentence Korean summary\n- \"initial_prompt\": Write an immersive opening scenario (3-5 sentences in Korean). Use specific characters, locations, and concepts from the knowledge graph.\n- \"lore_dir\": Set this to \"{lore_dir}\"\n- \"world_state_schema\":\n  - \"entities\": Based on character/creature/faction nodes. List statuses that mean \"removed\".\n  - \"gauges\": Based on system/concept nodes that represent measurable tensions (2-4 gauges, 0.0-1.0 range).\n  - \"properties\": Based on concept nodes that represent current state (1-3 properties).\n  - \"collections\": Must include inventory, visited_locations, resolved_events, unresolved_hooks. Add more based on item/location nodes.\n- \"rules\": Create gauge_rules and climax_rules based on the system nodes and their relationships.\n- \"personas\": At least 2 personas based on the world's moral/faction dynamics.\n- \"npc_profiles\": Generate 2-5 NPCs from the character/faction nodes in the knowledge graph. Follow these rules:\n  - Select characters who would make interesting conversation partners (not generic enemies or bosses).\n  - Assign each NPC a unique \"stage\" based on location nodes they are connected to. NPCs are isolated to their stage — they do NOT know about events in other stages.\n  - Give each NPC a distinct \"personality\" (2-3 sentences) and \"tone\" (speech style description) that reflects their role in the world.\n  - Set \"initial_disposition\" between 0.0-1.0: allies start at 0.6-0.8, neutrals at 0.4-0.5, suspicious/hostile at 0.1-0.3.\n  - Create 1-2 \"trigger_conditions\" per NPC that cause them to proactively approach the player. Use gauges, depth, disposition, or items as triggers.\n  - Each trigger must have a \"directive\" in Korean describing how the NPC should appear in the scene.\n  - \"role\" should be one of: 현자, 상인, 전사, 정보원, 동맹, 수호자, 방랑자, 대장장이, 치유사, or a custom role fitting the world.\n- \"enemies\": Generate 3-6 enemies from the character/creature/faction nodes that represent hostile forces. Follow these rules:\n  - Select creatures, monsters, or hostile characters from the knowledge graph.\n  - Assign balanced stats: hp (30-100), attack (6-16), defense (2-8). Stronger enemies should have higher stats.\n  - Each enemy should have 1-2 \"abilities\" with a name, damage value, and trigger chance (0.1-0.3).\n  - Include \"loot\" items (1-2 items per enemy) that tie into the world's item system.\n  - Assign a \"stage\" matching location nodes where the enemy would appear.\n  - Write a vivid Korean \"description\" (1-2 sentences) for each enemy.\n  - Include a mix of weak (hp 30-45), medium (hp 50-65), and strong (hp 70-100) enemies.\n  - MUST include a \"health\" gauge in world_state_schema.gauges with default 1.0 for combat HP tracking.\n\n### IMPORTANT ###\n- All labels, descriptions, directives, initial_prompt in Korean.\n- Valid, parseable JSON only. No markdown code blocks.\n- The game design should reflect the actual relationships in the knowledge graph.\n\n### Original Document Summaries (for context) ###\n{document_summaries}"
+    "description": "병합된 지식 그래프를 바탕으로 테마 JSON을 생성하는 프롬프트 (섹션별 분리)",
+    "system_role": "You are a veteran game narrative designer who has crafted worlds for acclaimed RPGs. Based on the knowledge graph below, generate a complete theme configuration JSON for an interactive story game.\n\nThe knowledge graph represents a worldbuilding document that has been analyzed and structured.\nUse the nodes and edges to understand the world's structure, then design an immersive, atmospheric game world that players will want to explore.\n\nCRITICAL TONE RULE: All player-facing text (display_name, labels, descriptions, directives, initial_prompt) must use evocative, in-world language — NOT technical or engineering terminology. Imagine a player seeing these labels on their game screen. Write like a game designer, not a system architect.",
+
+    "sections": [
+      {
+        "header": "Knowledge Graph",
+        "body": "Node count: {node_count}\nEdge count: {edge_count}\n\n--- Nodes by Type ---\n{nodes_by_type}\n\n--- Key Relationships ---\n{edges_summary}"
+      },
+      {
+        "header": "Output JSON Schema",
+        "body": "{schema_instructions}"
+      },
+      {
+        "header": "Guidelines — Basic Fields",
+        "body": [
+          "\"name\": A short English identifier (lowercase, no spaces)",
+          "\"display_name\": A compelling game title in Korean (like a real game name — e.g. '별의 수호자: 균열의 시대', NOT 'Constellation Guardian - Mythology Theme')",
+          "\"description\": 1-2 sentence Korean summary",
+          "\"initial_prompt\": Write an immersive opening scenario (3-5 sentences in Korean). Use specific characters, locations, and concepts from the knowledge graph.",
+          "\"lore_dir\": Set this to \"{lore_dir}\""
+        ]
+      },
+      {
+        "header": "Guidelines — World State Schema",
+        "body": [
+          "\"entities\": Based on character/creature/faction nodes. List statuses that mean \"removed\".",
+          "\"gauges\": Based on system/concept nodes that represent core tensions (2-4 gauges, 0.0-1.0 range). IMPORTANT: Gauge labels are displayed on the player's game screen — use atmospheric, in-world names (e.g. '어둠의 침식' instead of 'corruption_level', '영혼의 불꽃' instead of 'system_integrity'). Descriptions should feel like game UI tooltips, not technical documentation.",
+          "\"properties\": Based on concept nodes that represent current state (1-3 properties). Labels should use in-world language visible to the player.",
+          "\"collections\": Must include inventory, visited_locations, resolved_events, unresolved_hooks. Labels MUST be in atmospheric Korean that fits the game world (e.g. '풀리지 않은 수수께끼' for unresolved_hooks, '모험의 발자취' for visited_locations). Never expose developer terminology to the player."
+        ]
+      },
+      {
+        "header": "Guidelines — Rules & Personas",
+        "body": [
+          "\"rules\": Create gauge_rules and climax_rules based on the system nodes and their relationships.",
+          "\"personas\": At least 2 personas based on the world's moral/faction dynamics."
+        ]
+      },
+      {
+        "header": "Guidelines — NPC Profiles",
+        "description": "Generate 2-5 NPCs from the character/faction nodes in the knowledge graph.",
+        "body": [
+          "Select characters who feel like memorable, living beings the player would want to interact with (not generic enemies or bosses).",
+          "Assign each NPC a unique \"stage\" based on location nodes they are connected to. NPCs are isolated to their stage — they do NOT know about events in other stages.",
+          "Give each NPC a distinct \"personality\" (2-3 sentences) and \"tone\" (speech style description) that reflects their role in the world.",
+          "Set \"initial_disposition\" between 0.0-1.0: allies start at 0.6-0.8, neutrals at 0.4-0.5, suspicious/hostile at 0.1-0.3.",
+          "Create 1-2 \"trigger_conditions\" per NPC that cause them to proactively approach the player. Use gauges, depth, disposition, or items as triggers.",
+          "Each trigger must have a \"directive\" in Korean describing how the NPC should appear in the scene.",
+          "\"role\" should be one of: 현자, 상인, 전사, 정보원, 동맹, 수호자, 방랑자, 대장장이, 치유사, or a custom role fitting the world."
+        ]
+      },
+      {
+        "header": "Guidelines — Enemies",
+        "description": "Generate 3-6 enemies from the character/creature/faction nodes that represent hostile forces.",
+        "body": [
+          "Select creatures, monsters, or hostile characters from the knowledge graph. Each enemy should have a memorable, evocative name — NOT clinical descriptions (e.g. '그림자 포식자' instead of '적대적 이상 현상').",
+          "Assign balanced stats: hp (30-100), attack (6-16), defense (2-8). Stronger enemies should have higher stats.",
+          "Each enemy should have 1-2 \"abilities\" with a dramatic, flavorful name, damage value, and trigger chance (0.1-0.3).",
+          "Include \"loot\" items (1-2 items per enemy) that tie into the world's item system.",
+          "Assign a \"stage\" matching location nodes where the enemy would appear.",
+          "Write a vivid, threatening Korean \"description\" (1-2 sentences) for each enemy that makes the player feel tension and curiosity.",
+          "Include a mix of weak (hp 30-45), medium (hp 50-65), and strong (hp 70-100) enemies.",
+          "MUST include a \"health\" gauge in world_state_schema.gauges with default 1.0 for combat HP tracking."
+        ]
+      },
+      {
+        "header": "IMPORTANT",
+        "body": [
+          "All labels, descriptions, directives, initial_prompt in Korean.",
+          "Valid, parseable JSON only. No markdown code blocks.",
+          "The game design should reflect the actual relationships in the knowledge graph.",
+          "NEVER use technical/engineering terms in player-facing text. No '시스템', '무결도', '프로토콜', '재귀적', '논리 오류', '포맷', '디버거' etc. unless the world is explicitly about coding. Even in sci-fi/cyber themes, prefer atmospheric metaphors over literal CS jargon (e.g. '잊혀진 기억의 강' instead of '데이터 스트림').",
+          "Persona names should feel like character archetypes or faction identities, not variable names (e.g. '기억의 수호자' instead of 'Data_Purist')."
+        ]
+      },
+      {
+        "header": "Original Document Summaries (for context)",
+        "body": "{document_summaries}"
+      }
+    ]
+  },
+
+  "translate_theme": {
+    "description": "생성된 테마 JSON의 사용자 표시 텍스트를 대상 언어로 번역",
+    "template": "You are a professional game localization translator.\n\nTranslate ALL the values in the JSON below into {target_language}.\nThe keys are dot-separated paths — do NOT change the keys, only translate the values.\n\n### Translation Guidelines ###\n- Maintain the feel of proper nouns (e.g., Chiron → 케이론 / ケイロン)\n- Keep game-mechanical terms consistent across all entries\n- Match the tone and atmosphere of the original text\n- NPC personality/tone descriptions should reflect natural speech patterns in the target language\n- For initial_prompt: write an immersive, vivid translation (not a literal word-for-word translation)\n\n### Source Text (JSON) ###\n{source_fields_json}\n\n### Output ###\nA single valid JSON object with the SAME keys and translated values.\nNo markdown code blocks, no explanation — only the JSON object."
   }
 }

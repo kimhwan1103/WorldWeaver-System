@@ -6,6 +6,8 @@ export interface WorldState {
   properties: Record<string, string>;
   collections: Record<string, string[]>;
   gauge_labels: Record<string, string>;
+  property_labels?: Record<string, string>;
+  collection_labels?: Record<string, string>;
 }
 
 // ── 씬 ──
@@ -17,6 +19,7 @@ export interface Choice {
   choice_type: "story" | "dialogue" | "combat";
   npc_name?: string;
   enemy_name?: string;
+  risky?: boolean;
 }
 
 export interface SceneFeatures {
@@ -44,9 +47,24 @@ export interface SceneResponse {
   world_state: WorldState;
   npcs: NPCInfo[];
   scene_count: number;
+  quests?: Quest[];
+  ending_available?: boolean;
+  titles?: Title[];
+  map?: MapData;
+  game_over?: GameOverInfo;
   redirect?: "dialogue" | "combat";
   npc_name?: string;
   enemy_name?: string;
+  greeting?: NPCGreeting;
+}
+
+export interface NPCGreeting {
+  npc_name: string;
+  npc_key?: string;    // 원본 이름 (API 호출용)
+  role: string;
+  greeting: string;
+  disposition: number;
+  disposition_label: string;
 }
 
 // ── NPC 대화 ──
@@ -66,6 +84,8 @@ export interface DialogueResponse {
   action: NPCAction | null;
   should_end: boolean;
   world_state: WorldState;
+  quests?: Quest[];
+  recovered_memories?: { type: string; content: string }[];
 }
 
 // ── 전투 ──
@@ -99,6 +119,7 @@ export interface CombatResult {
   damage_taken: number;
   loot: string[];
   world_state: WorldState;
+  game_over?: GameOverInfo;
 }
 
 export interface CombatActionResponse {
@@ -110,7 +131,83 @@ export interface CombatActionResponse {
   enemy_hp: number;
   enemy_max_hp: number;
   combat_over: boolean;
+  world_state?: WorldState;
   result?: CombatResult;
+}
+
+// ── 퀘스트 ──
+
+export interface Quest {
+  id: string;
+  content: string;
+  npc: string;         // 번역된 NPC 이름
+  npc_key: string;     // 원본 NPC 이름 (API 호출용)
+  status: "active" | "fading" | "lost" | "completed";
+  stage: string;
+  edge_count: number;
+}
+
+// ── 아이템/칭호 ──
+
+export interface ItemInfo {
+  name: string;
+  description: string;
+  base_effect: Record<string, number>;
+  total_effect: Record<string, number>;
+  is_consumable: boolean;
+  hidden_discovered: boolean;
+  has_hidden: boolean;
+  hidden_effect?: Record<string, number>;
+  origin_type: string;
+  origin_name: string;
+}
+
+export interface Title {
+  id: string;
+  name: string;
+  description: string;
+  bonus: Record<string, number>;
+}
+
+export interface InvestigateResult {
+  discovered: boolean;
+  item?: string;
+  hidden_effect?: Record<string, number>;
+  description?: string;
+  new_titles?: Title[];
+  message?: string;
+}
+
+// ── 게임오버 ──
+
+export interface GameOverInfo {
+  game_over_id: string;
+  cause: string;
+  factors: Record<string, string>;
+}
+
+export interface GameOverResponse {
+  game_over_id: string;
+  cause: string;
+  title: string;
+  epilogue: string;
+  final_line: string;
+  tone: string;
+  factors: Record<string, string>;
+}
+
+// ── ���딩 ──
+
+export interface EndingResponse {
+  ending_id: string;
+  ending_type: string;
+  title: string;
+  epilogue: string;
+  final_line: string;
+  tone: string;
+  conditions_met: Record<string, string>;
+  world_state: WorldState;
+  quests: Quest[];
 }
 
 // ── 테마 ──
@@ -128,11 +225,33 @@ export interface ThemeInfo {
 export interface GameStartResponse {
   session_id: string;
   theme: string;
+  description: string;
   initial_prompt: string;
   world_state: WorldState;
   enemies: string[];
 }
 
+// ── 월드맵 ──
+
+export interface StageInfo {
+  name: string;
+  display_name: string;
+  description: string;
+  layer: number;
+  connects_to: string[];
+  unlocked: boolean;
+  visited: boolean;
+  is_current: boolean;
+  npcs: string[];
+  enemies: string[];
+  unlock_hint: string;
+}
+
+export interface MapData {
+  current_stage: string;
+  stages: StageInfo[];
+}
+
 // ── 게임 뷰 상태 ──
 
-export type GameView = "title" | "story" | "combat" | "dialogue";
+export type GameView = "title" | "builder" | "loading" | "intro" | "story" | "combat" | "dialogue" | "ending" | "map" | "gameover";

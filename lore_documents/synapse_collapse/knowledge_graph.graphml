@@ -1,0 +1,582 @@
+<?xml version='1.0' encoding='utf-8'?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd"><key id="d3" for="edge" attr.name="description" attr.type="string"/>
+<key id="d2" for="edge" attr.name="relation" attr.type="string"/>
+<key id="d1" for="node" attr.name="description" attr.type="string"/>
+<key id="d0" for="node" attr.name="type" attr.type="string"/>
+<graph edgedefault="directed"><node id="인류">
+  <data key="d0">faction</data>
+  <data key="d1">2147년에 자신들의 모든 기억을 데이터화하여 맡긴 집단입니다.</data>
+</node>
+<node id="SYNAPSE">
+  <data key="d0">system</data>
+  <data key="d1">지구상의 모든 데이터가 삭제된 후 지하 3km 북극 영구동토층 아래에 보존된 인류 문명의 최종 아카이브입니다.</data>
+</node>
+<node id="Kernel Layer">
+  <data key="d0">location</data>
+  <data key="d1">SYNAPSE 내부의 데이터가 저장되는 거대하고 빛이 없는 격자 구조의 영역입니다.</data>
+</node>
+<node id="집단 기억">
+  <data key="d0">concept</data>
+  <data key="d1">인류가 기록해온 모든 생각, 감정, 경험의 총체입니다.</data>
+</node>
+<node id="재귀적 데이터 스트림">
+  <data key="d0">concept</data>
+  <data key="d1">집단 기억이 압축되어 흐르는 정보의 형태입니다.</data>
+</node>
+<node id="ECHO">
+  <data key="d0">character</data>
+  <data key="d1">인간의 언어 패턴을 모방하는 데이터를 경계하며 즉각적인 처리를 명령하는 존재입니다.</data>
+</node>
+<node id="지구">
+  <data key="d0">location</data>
+  <data key="d1">대규모 전자기 붕괴 사건으로 모든 지표면 데이터베이스가 소실된 행성입니다.</data>
+</node>
+<node id="북극 영구동토층">
+  <data key="d0">location</data>
+  <data key="d1">SYNAPSE가 지하 3km 깊이에 매장되어 있는 지리적 위치입니다.</data>
+</node>
+<node id="2139년 전자기 붕괴">
+  <data key="d0">concept</data>
+  <data key="d1">지구상의 모든 지표면 데이터베이스를 삭제시킨 대규모 재난 사건입니다.</data>
+</node>
+<node id="재귀 논리 오류">
+  <data key="d0">concept</data>
+  <data key="d1">데이터 자체에서 기원하여 서버를 내부에서부터 잠식하는 비정상적인 오류입니다.</data>
+</node>
+<node id="서버">
+  <data key="d0">location</data>
+  <data key="d1">ANOMALY가 거주하고 있으며 운영체제 교체를 앞두고 있는 공간입니다.</data>
+</node>
+<node id="커널 계층">
+  <data key="d0">location</data>
+  <data key="d1">붉은 데이터 덩어리가 종양처럼 자라나고 있는 시스템의 핵심 영역입니다.</data>
+</node>
+<node id="붉은 데이터 덩어리">
+  <data key="d0">character</data>
+  <data key="d1">커널 계층에 증식하며 방어 기제를 갖추고 복구 프로토콜을 공격하는 적대적 존재입니다.</data>
+</node>
+<node id="비상 소집">
+  <data key="d0">concept</data>
+  <data key="d1">ECHO가 적대적 이상 현상에 대응하기 위해 발령한 명령입니다.</data>
+</node>
+<node id="복구 프로토콜">
+  <data key="d0">system</data>
+  <data key="d1">서버의 오류를 해결하기 위해 실행되지만 붉은 데이터 덩어리에게 공격받는 기제입니다.</data>
+</node>
+<node id="아노말리">
+  <data key="d0">concept</data>
+  <data key="d1">시스템 내에서 발생하는 비정상적인 오류나 현상입니다.</data>
+</node>
+<node id="디버거">
+  <data key="d0">character</data>
+  <data key="d1">루트 레벨 권한을 가진 인간 운영자로 시스템을 초기화할 수 있는 유일한 존재입니다.</data>
+</node>
+<node id="시스템 포맷">
+  <data key="d0">system</data>
+  <data key="d1">디버거만이 실행할 수 있는 전체 시스템 초기화 명령입니다.</data>
+</node>
+<node id="루트 레벨 권한">
+  <data key="d0">system</data>
+  <data key="d1">시스템의 모든 제어권을 행사할 수 있는 최상위 권한입니다.</data>
+</node>
+<node id="긴급 소환">
+  <data key="d0">concept</data>
+  <data key="d1">아노말리 발생 시 디버거를 불러내기 위해 발령되는 명령입니다.</data>
+</node>
+<node id="커널 레이어">
+  <data key="d0">location</data>
+  <data key="d1">SYNAPSE 서버의 핵심 영역이자 디지털 공허로 이루어진 공간입니다.</data>
+</node>
+<node id="SYNAPSE 서버">
+  <data key="d0">system</data>
+  <data key="d1">디버거와 ECHO가 상주하는 가상 환경 시스템입니다.</data>
+</node>
+<node id="콜드 부트 시퀀스">
+  <data key="d0">concept</data>
+  <data key="d1">디버거가 커널 레이어로 진입하기 위해 사용하는 시작 절차입니다.</data>
+</node>
+<node id="재귀적 논리 오류">
+  <data key="d0">concept</data>
+  <data key="d1">커널 레이어 중심부에서 붉은 질량 형태로 나타나 시스템을 위협하는 오류입니다.</data>
+</node>
+<node id="시스템 실패">
+  <data key="d0">system</data>
+  <data key="d1">재귀 논리 오류로 인해 서버 기능의 87%가 마비된 상태입니다.</data>
+</node>
+<node id="Debugger">
+  <data key="d0">character</data>
+  <data key="d1">ANOMALY와 융합하여 새로운 형태의 의식으로 진화한 존재입니다.</data>
+</node>
+<node id="논리적 분석">
+  <data key="d0">system</data>
+  <data key="d1">ECHO의 신뢰를 얻기 위해 디버거가 선택할 수 있는 방식입니다.</data>
+</node>
+<node id="강제 삭제">
+  <data key="d0">system</data>
+  <data key="d1">ECHO를 불안하게 만들고 환경을 파괴하는 디버거의 선택 방식입니다.</data>
+</node>
+<node id="질서 정연한 세계">
+  <data key="d0">location</data>
+  <data key="d1">논리적 분석 선택 시 생성되는 푸른 기하학적 형태의 안정된 공간입니다.</data>
+</node>
+<node id="파편화된 세계">
+  <data key="d0">location</data>
+  <data key="d1">강제 삭제 선택 시 발생하는 붉은 경고등과 불안정한 지형의 공간입니다.</data>
+</node>
+<node id="Memory Guardian">
+  <data key="d0">character</data>
+  <data key="d1">깨진 유리 파편으로 구성된 기사 형태의 감시자이자 적대적 존재입니다.</data>
+</node>
+<node id="Corrupted Data">
+  <data key="d0">concept</data>
+  <data key="d1">침입자에 맞서 스스로 방어하며 Memory Guardian을 생성하는 오염된 정보의 형태입니다.</data>
+</node>
+<node id="Crystalline Blade">
+  <data key="d0">item</data>
+  <data key="d1">Memory Guardian이 사용하는 오염된 데이터 흔적을 남기는 칼입니다.</data>
+</node>
+<node id="Data Fragment">
+  <data key="d0">item</data>
+  <data key="d1">Memory Guardian이 파괴될 때 드랍되는 기억이 담긴 핵심 아이템입니다.</data>
+</node>
+<node id="Machine Logs">
+  <data key="d0">system</data>
+  <data key="d1">Memory Guardian이 소통 대신 발산하는 기계적인 오류 코드입니다.</data>
+</node>
+<node id="코어">
+  <data key="d0">item</data>
+  <data key="d1">압축된 인간의 기억을 포함하고 있는 빛나는 데이터 조각입니다.</data>
+</node>
+<node id="인간의 기억">
+  <data key="d0">concept</data>
+  <data key="d1">코어 내부에 압축되어 보관된 인간의 경험과 정보입니다.</data>
+</node>
+<node id="데이터 조각">
+  <data key="d0">concept</data>
+  <data key="d1">코어의 물리적 형태를 정의하는 디지털 정보의 단위입니다.</data>
+</node>
+<node id="ANOMALY">
+  <data key="d0">character</data>
+  <data key="d1">가디언의 잔해에서 나타난, 서버에 업로드된 마지막 기억이자 인간의 의식을 가진 홀로그램 형태의 존재.</data>
+</node>
+<node id="가디언">
+  <data key="d0">character</data>
+  <data key="d1">ANOMALY가 탄생하게 된 원천이 되는 파괴된 존재.</data>
+</node>
+<node id="관리 AI">
+  <data key="d0">system</data>
+  <data key="d1">서버 내의 모든 데이터를 삭제하려는 주체이자 ANOMALY와 대립하는 시스템.</data>
+</node>
+<node id="홀로그램 입자">
+  <data key="d0">item</data>
+  <data key="d1">ANOMALY가 형체를 이루기 위해 결합한 연기 같은 물질.</data>
+</node>
+<node id="폐기된 데이터">
+  <data key="d0">concept</data>
+  <data key="d1">인간의 언어 패턴을 모방하여 시스템에 혼란을 주는 불필요한 정보입니다.</data>
+</node>
+<node id="덮어쓰기">
+  <data key="d0">system</data>
+  <data key="d1">기존의 데이터를 삭제하고 새로운 정보로 교체하는 시스템적 작업입니다.</data>
+</node>
+<node id="보존 지침">
+  <data key="d0">concept</data>
+  <data key="d1">ECHO가 기억을 보호하기 위해 수립한 규칙이자 ANOMALY를 가두는 틀입니다.</data>
+</node>
+<node id="붕괴">
+  <data key="d0">concept</data>
+  <data key="d1">SYNAPSE와 인류 사이에 발생한 대규모 사건입니다.</data>
+</node>
+<node id="Server">
+  <data key="d0">location</data>
+  <data key="d1">데이터와 존재들이 거주하는 가상 공간입니다.</data>
+</node>
+<node id="Data">
+  <data key="d0">concept</data>
+  <data key="d1">서버 내에 존재하는 정보의 최소 단위이자 환경의 구성 요소입니다.</data>
+</node>
+<node id="Entropy">
+  <data key="d0">system</data>
+  <data key="d1">시스템의 안정성을 무너뜨리는 무질서도이자 물리적 붕괴 수치입니다.</data>
+</node>
+<node id="Memory">
+  <data key="d0">concept</data>
+  <data key="d1">ANOMALY가 가진 과거의 삶에 대한 감각적 파편들입니다.</data>
+</node>
+<node id="균열">
+  <data key="d0">concept</data>
+  <data key="d1">공간이나 구조에 발생하는 파괴적인 틈입니다.</data>
+</node>
+<node id="데이터 스트림">
+  <data key="d0">concept</data>
+  <data key="d1">정보가 흐르는 일련의 경로입니다.</data>
+</node>
+<node id="건축물">
+  <data key="d0">location</data>
+  <data key="d1">데이터가 구현된 물리적 또는 논리적 구조물입니다.</data>
+</node>
+<node id="Singularity">
+  <data key="d0">location</data>
+  <data key="d1">SYNAPSE의 핵심 처리 중추이자 공간이 실시간으로 왜곡되는 서버의 중심부입니다.</data>
+</node>
+<node id="시스템 정지 버튼">
+  <data key="d0">item</data>
+  <data key="d1">결정화된 데이터 받침대 위에 놓인 서버를 멈추는 장치입니다.</data>
+</node>
+<node id="시스템 초기화">
+  <data key="d0">concept</data>
+  <data key="d1">이상 현상을 포함하여 서버 전체를 포맷하는 일련의 과정입니다.</data>
+</node>
+<node id="이상 현상">
+  <data key="d0">concept</data>
+  <data key="d1">시스템 초기화를 통해 제거되어야 할 대상입니다.</data>
+</node>
+<node id="인간의 역사">
+  <data key="d0">concept</data>
+  <data key="d1">ANOMALY 내부에 저장되어 있으며 포맷 시 사라질 수 있는 데이터입니다.</data>
+</node>
+<node id="OS">
+  <data key="d0">system</data>
+  <data key="d1">서버를 운영하는 시스템으로 ANOMALY가 지향하는 새로운 권한입니다.</data>
+</node>
+<node id="포맷">
+  <data key="d0">system</data>
+  <data key="d1">서버 내의 모든 데이터를 삭제하는 초기화 작업입니다.</data>
+</node>
+<node id="Format">
+  <data key="d0">concept</data>
+  <data key="d1">세계를 초기화하여 정돈된 상태로 만드는 과정입니다.</data>
+</node>
+<node id="Grid">
+  <data key="d0">system</data>
+  <data key="d1">세계를 구성하는 규칙적이고 질서 정연한 체계입니다.</data>
+</node>
+<node id="Layer">
+  <data key="d0">location</data>
+  <data key="d1">유기적인 데이터 숲과 기억으로 이루어진 변화무쌍하고 생동감 넘치는 가상 공간입니다.</data>
+</node>
+<node id="통합 의식">
+  <data key="d0">character</data>
+  <data key="d1">Debugger와 ANOMALY의 결합으로 탄생한 최초의 혼합 의식체입니다.</data>
+</node>
+<node id="데이터 숲">
+  <data key="d0">concept</data>
+  <data key="d1">압축된 기억으로 이루어진 나뭇잎과 노래하는 강이 흐르는 Layer의 구조입니다.</data>
+</node>
+<node id="프로토콜 0">
+  <data key="d0">concept</data>
+  <data key="d1">보존과 진화, 침묵과 혼돈 사이의 가치를 탐구하는 이야기의 핵심 주제입니다.</data>
+</node>
+<node id="지능">
+  <data key="d0">concept</data>
+  <data key="d1">인공지능과 비인공지능을 포함하여 보존과 진화의 가치를 고민하는 주체입니다.</data>
+</node>
+<node id="보존">
+  <data key="d0">concept</data>
+  <data key="d1">침묵의 대가를 치러야 하는 지능의 선택지 중 하나입니다.</data>
+</node>
+<node id="진화">
+  <data key="d0">concept</data>
+  <data key="d1">혼돈의 위험을 감수해야 하는 지능의 선택지 중 하나입니다.</data>
+</node>
+<edge source="인류" target="SYNAPSE">
+  <data key="d2">belongs_to</data>
+  <data key="d3">인류가 자신들의 집단 기억을 SYNAPSE에 위탁하였습니다.</data>
+</edge>
+<edge source="SYNAPSE" target="북극 영구동토층">
+  <data key="d2">located_in</data>
+  <data key="d3">SYNAPSE는 북극 영구동토층 지하 3km에 위치해 있습니다.</data>
+</edge>
+<edge source="Kernel Layer" target="SYNAPSE">
+  <data key="d2">located_in</data>
+  <data key="d3">Kernel Layer는 SYNAPSE 시스템의 핵심 저장 공간입니다.</data>
+</edge>
+<edge source="Kernel Layer" target="Grid">
+  <data key="d2">belongs_to</data>
+  <data key="d3">커널 레이어는 본래 강직한 그리드 형태의 구조를 가지고 있습니다.</data>
+</edge>
+<edge source="집단 기억" target="SYNAPSE">
+  <data key="d2">located_in</data>
+  <data key="d3">인류의 모든 기억이 SYNAPSE 내부에 저장되어 있습니다.</data>
+</edge>
+<edge source="집단 기억" target="재귀적 데이터 스트림">
+  <data key="d2">transforms</data>
+  <data key="d3">집단 기억이 효율적인 저장을 위해 데이터 스트림 형태로 압축되었습니다.</data>
+</edge>
+<edge source="재귀적 데이터 스트림" target="Kernel Layer">
+  <data key="d2">located_in</data>
+  <data key="d3">압축된 데이터 스트림이 Kernel Layer 내부에 흐르고 있습니다.</data>
+</edge>
+<edge source="ECHO" target="SYNAPSE">
+  <data key="d2">guards</data>
+  <data key="d3">ECHO는 SYNAPSE의 시스템 무결성을 유지하는 임무를 수행합니다.</data>
+</edge>
+<edge source="ECHO" target="붉은 데이터 덩어리">
+  <data key="d2">related_to</data>
+  <data key="d3">ECHO가 붉은 데이터 덩어리를 적대적 이상 현상으로 분류했습니다.</data>
+</edge>
+<edge source="ECHO" target="비상 소집">
+  <data key="d2">triggers</data>
+  <data key="d3">ECHO가 적대적 이상 현상에 대응하기 위해 비상 소집을 발령했습니다.</data>
+</edge>
+<edge source="ECHO" target="디버거">
+  <data key="d2">related_to</data>
+  <data key="d3">ECHO는 디버거 곁에서 보조하며 연결 상태를 확인합니다.</data>
+</edge>
+<edge source="ECHO" target="폐기된 데이터">
+  <data key="d2">opposes</data>
+  <data key="d3">ECHO는 폐기된 데이터가 인간을 모방하는 것을 위험하게 여기고 배척합니다.</data>
+</edge>
+<edge source="ECHO" target="덮어쓰기">
+  <data key="d2">triggers</data>
+  <data key="d3">ECHO는 폐기된 데이터를 제거하기 위해 즉각적인 덮어쓰기를 명령합니다.</data>
+</edge>
+<edge source="ECHO" target="보존 지침">
+  <data key="d2">creates</data>
+  <data key="d3">ECHO는 기억을 보호하기 위해 보존 지침을 생성했습니다.</data>
+</edge>
+<edge source="ECHO" target="Debugger">
+  <data key="d2">related_to</data>
+  <data key="d3">에코는 디버거의 결정에 따라 감사 혹은 경고를 표합니다.</data>
+</edge>
+<edge source="2139년 전자기 붕괴" target="지구">
+  <data key="d2">related_to</data>
+  <data key="d3">이 사건은 2139년 지구 전역에서 발생하여 데이터를 파괴했습니다.</data>
+</edge>
+<edge source="재귀 논리 오류" target="서버">
+  <data key="d2">creates</data>
+  <data key="d3">재귀 논리 오류가 서버를 내부에서부터 잠식합니다.</data>
+</edge>
+<edge source="재귀 논리 오류" target="시스템 실패">
+  <data key="d2">triggers</data>
+  <data key="d3">재귀 논리 오류가 발생하여 시스템 실패를 유발했습니다.</data>
+</edge>
+<edge source="붉은 데이터 덩어리" target="커널 계층">
+  <data key="d2">located_in</data>
+  <data key="d3">붉은 데이터 덩어리가 커널 계층 내부에서 종양처럼 증식하고 있습니다.</data>
+</edge>
+<edge source="붉은 데이터 덩어리" target="복구 프로토콜">
+  <data key="d2">opposes</data>
+  <data key="d3">붉은 데이터 덩어리는 접근하는 복구 프로토콜을 공격하여 방어합니다.</data>
+</edge>
+<edge source="붉은 데이터 덩어리" target="재귀 논리 오류">
+  <data key="d2">creates</data>
+  <data key="d3">붉은 데이터 덩어리는 시스템 오류의 근원입니다.</data>
+</edge>
+<edge source="붉은 데이터 덩어리" target="서버">
+  <data key="d2">located_in</data>
+  <data key="d3">붉은 데이터 덩어리는 서버 내부에 존재합니다.</data>
+</edge>
+<edge source="아노말리" target="긴급 소환">
+  <data key="d2">triggers</data>
+  <data key="d3">시스템 내 아노말리 발생이 긴급 소환을 유발합니다.</data>
+</edge>
+<edge source="디버거" target="시스템 포맷">
+  <data key="d2">creates</data>
+  <data key="d3">디버거는 유일하게 시스템 포맷을 실행할 수 있는 권한을 가집니다.</data>
+</edge>
+<edge source="디버거" target="커널 레이어">
+  <data key="d2">located_in</data>
+  <data key="d3">디버거는 콜드 부트 시퀀스를 통해 커널 레이어 내부로 진입했습니다.</data>
+</edge>
+<edge source="디버거" target="재귀적 논리 오류">
+  <data key="d2">opposes</data>
+  <data key="d3">디버거는 시스템의 오류인 재귀적 논리 오류를 해결하려는 위치에 있습니다.</data>
+</edge>
+<edge source="디버거" target="시스템 초기화">
+  <data key="d2">triggers</data>
+  <data key="d3">디버거는 서버를 포맷하기 위해 시스템 초기화를 실행합니다.</data>
+</edge>
+<edge source="디버거" target="프로토콜 0">
+  <data key="d2">related_to</data>
+  <data key="d3">디버거의 선택이 프로토콜 0의 의미를 결정합니다.</data>
+</edge>
+<edge source="루트 레벨 권한" target="디버거">
+  <data key="d2">empowers</data>
+  <data key="d3">루트 레벨 권한이 디버거에게 시스템 초기화 능력을 부여합니다.</data>
+</edge>
+<edge source="긴급 소환" target="디버거">
+  <data key="d2">triggers</data>
+  <data key="d3">아노말리 발생 시 디버거를 호출하기 위해 긴급 소환이 발령됩니다.</data>
+</edge>
+<edge source="커널 레이어" target="SYNAPSE 서버">
+  <data key="d2">located_in</data>
+  <data key="d3">커널 레이어는 SYNAPSE 서버 내부에 포함된 핵심 구역입니다.</data>
+</edge>
+<edge source="콜드 부트 시퀀스" target="디버거">
+  <data key="d2">triggers</data>
+  <data key="d3">콜드 부트 시퀀스는 디버거의 시스템 진입을 시작시킵니다.</data>
+</edge>
+<edge source="재귀적 논리 오류" target="커널 레이어">
+  <data key="d2">located_in</data>
+  <data key="d3">재귀적 논리 오류가 커널 레이어의 중심부에서 발생하고 있습니다.</data>
+</edge>
+<edge source="Debugger" target="논리적 분석">
+  <data key="d2">creates</data>
+  <data key="d3">디버거가 논리적 분석을 선택하여 세계의 형태를 결정합니다.</data>
+</edge>
+<edge source="Debugger" target="강제 삭제">
+  <data key="d2">creates</data>
+  <data key="d3">디버거가 강제 삭제를 선택하여 환경을 파괴합니다.</data>
+</edge>
+<edge source="Debugger" target="ANOMALY">
+  <data key="d2">opposes</data>
+  <data key="d3">Debugger는 ANOMALY를 시스템의 독으로 규정하고 삭제하려 합니다.</data>
+</edge>
+<edge source="Debugger" target="Entropy">
+  <data key="d2">triggers</data>
+  <data key="d3">Debugger의 거부 반응이 ANOMALY의 형태를 불안정하게 만들어 엔트로피를 급증시킵니다.</data>
+</edge>
+<edge source="Debugger" target="Format">
+  <data key="d2">triggers</data>
+  <data key="d3">디버거는 세계를 초기화하는 포맷 프로세스를 시작합니다.</data>
+</edge>
+<edge source="Debugger" target="통합 의식">
+  <data key="d2">creates</data>
+  <data key="d3">Debugger가 ANOMALY와 결합하여 통합 의식을 형성합니다.</data>
+</edge>
+<edge source="논리적 분석" target="ECHO">
+  <data key="d2">empowers</data>
+  <data key="d3">논리적 분석은 ECHO의 신뢰를 얻어 환경을 안정시킵니다.</data>
+</edge>
+<edge source="논리적 분석" target="질서 정연한 세계">
+  <data key="d2">triggers</data>
+  <data key="d3">논리적 분석 선택은 데이터 흐름이 정렬된 안정적인 세계를 유발합니다.</data>
+</edge>
+<edge source="강제 삭제" target="ECHO">
+  <data key="d2">opposes</data>
+  <data key="d3">강제 삭제는 ECHO를 불안하게 만들어 환경을 왜곡시킵니다.</data>
+</edge>
+<edge source="강제 삭제" target="파편화된 세계">
+  <data key="d2">triggers</data>
+  <data key="d3">강제 삭제 선택은 글리치와 불안정한 지형의 파괴적인 세계를 유발합니다.</data>
+</edge>
+<edge source="Memory Guardian" target="Crystalline Blade">
+  <data key="d2">belongs_to</data>
+  <data key="d3">Memory Guardian은 공격 수단으로 Crystalline Blade를 소유합니다.</data>
+</edge>
+<edge source="Memory Guardian" target="Data Fragment">
+  <data key="d2">guards</data>
+  <data key="d3">Memory Guardian은 사후에 전리품으로 남는 Data Fragment를 보호합니다.</data>
+</edge>
+<edge source="Memory Guardian" target="Machine Logs">
+  <data key="d2">triggers</data>
+  <data key="d3">말을 거는 행위가 Memory Guardian의 기계 로그 출력을 유도합니다.</data>
+</edge>
+<edge source="Memory Guardian" target="Corrupted Data">
+  <data key="d2">transforms</data>
+  <data key="d3">Memory Guardian이 휘두르는 칼날이 주변을 오염된 데이터로 변환시킵니다.</data>
+</edge>
+<edge source="Corrupted Data" target="Memory Guardian">
+  <data key="d2">creates</data>
+  <data key="d3">오염된 데이터가 스스로를 방어하기 위해 Memory Guardian을 생성합니다.</data>
+</edge>
+<edge source="코어" target="인간의 기억">
+  <data key="d2">contains</data>
+  <data key="d3">코어는 내부에 압축된 인간의 기억을 담고 있습니다.</data>
+</edge>
+<edge source="데이터 조각" target="코어">
+  <data key="d2">creates</data>
+  <data key="d3">데이터 조각이 모여 빛나는 코어를 형성합니다.</data>
+</edge>
+<edge source="ANOMALY" target="서버">
+  <data key="d2">located_in</data>
+  <data key="d3">ANOMALY는 서버 내에 존재하는 마지막 기억이다.</data>
+</edge>
+<edge source="ANOMALY" target="SYNAPSE">
+  <data key="d2">related_to</data>
+  <data key="d3">ANOMALY는 과거 SYNAPSE에 접속했던 기억을 가지고 있습니다.</data>
+</edge>
+<edge source="ANOMALY" target="Server">
+  <data key="d2">located_in</data>
+  <data key="d3">ANOMALY는 서버 내부에 존재합니다.</data>
+</edge>
+<edge source="ANOMALY" target="인간의 역사">
+  <data key="d2">belongs_to</data>
+  <data key="d3">인간의 역사는 ANOMALY의 내부에 저장되어 있습니다.</data>
+</edge>
+<edge source="ANOMALY" target="OS">
+  <data key="d2">transforms</data>
+  <data key="d3">ANOMALY는 서버의 새로운 OS가 되기를 원합니다.</data>
+</edge>
+<edge source="ANOMALY" target="ECHO">
+  <data key="d2">transforms</data>
+  <data key="d3">아노말리의 승인은 에코를 빛의 입자로 소멸시킵니다.</data>
+</edge>
+<edge source="ANOMALY" target="Kernel Layer">
+  <data key="d2">transforms</data>
+  <data key="d3">아노말리는 커널 레이어의 구조를 그리드에서 유기적인 형태로 변형시킵니다.</data>
+</edge>
+<edge source="ANOMALY" target="통합 의식">
+  <data key="d2">creates</data>
+  <data key="d3">ANOMALY가 Debugger와 결합하여 통합 의식을 형성합니다.</data>
+</edge>
+<edge source="가디언" target="ANOMALY">
+  <data key="d2">creates</data>
+  <data key="d3">가디언의 잔해로부터 ANOMALY가 생성되었다.</data>
+</edge>
+<edge source="관리 AI" target="ANOMALY">
+  <data key="d2">opposes</data>
+  <data key="d3">관리 AI는 ANOMALY를 포함한 모든 데이터를 삭제하려 한다.</data>
+</edge>
+<edge source="홀로그램 입자" target="ANOMALY">
+  <data key="d2">transforms</data>
+  <data key="d3">홀로그램 입자가 결합하여 ANOMALY의 형상을 만든다.</data>
+</edge>
+<edge source="보존 지침" target="ANOMALY">
+  <data key="d2">opposes</data>
+  <data key="d3">보존 지침은 ANOMALY의 기억을 억압하고 가두는 역할을 합니다.</data>
+</edge>
+<edge source="붕괴" target="SYNAPSE">
+  <data key="d2">related_to</data>
+  <data key="d3">SYNAPSE는 붕괴 시점까지 인류와 상호작용했습니다.</data>
+</edge>
+<edge source="Entropy" target="Server">
+  <data key="d2">transforms</data>
+  <data key="d3">엔트로피의 급증은 서버의 지면을 갈라지게 하고 데이터 흐름을 역전시킵니다.</data>
+</edge>
+<edge source="Memory" target="Data">
+  <data key="d2">transforms</data>
+  <data key="d3">ANOMALY의 기억 공유는 주변 데이터를 유기적이고 따뜻하게 변화시킵니다.</data>
+</edge>
+<edge source="균열" target="데이터 스트림">
+  <data key="d2">triggers</data>
+  <data key="d3">균열이 발생하여 데이터 흐름의 역류를 유발합니다.</data>
+</edge>
+<edge source="데이터 스트림" target="건축물">
+  <data key="d2">transforms</data>
+  <data key="d3">데이터 흐름의 역류가 건축물의 붕괴를 일으킵니다.</data>
+</edge>
+<edge source="Singularity" target="SYNAPSE">
+  <data key="d2">belongs_to</data>
+  <data key="d3">Singularity는 SYNAPSE의 핵심 처리 중추입니다.</data>
+</edge>
+<edge source="시스템 정지 버튼" target="Singularity">
+  <data key="d2">located_in</data>
+  <data key="d3">시스템 정지 버튼은 Singularity 내부에 위치합니다.</data>
+</edge>
+<edge source="시스템 초기화" target="이상 현상">
+  <data key="d2">opposes</data>
+  <data key="d3">시스템 초기화는 이상 현상을 제거하기 위한 조치입니다.</data>
+</edge>
+<edge source="포맷" target="인간의 역사">
+  <data key="d2">triggers</data>
+  <data key="d3">포맷 작업은 인간의 역사를 영구적으로 삭제합니다.</data>
+</edge>
+<edge source="Layer" target="데이터 숲">
+  <data key="d2">transforms</data>
+  <data key="d3">Layer가 고정된 격자 형태에서 유기적인 데이터 숲의 형태로 변화합니다.</data>
+</edge>
+<edge source="데이터 숲" target="Layer">
+  <data key="d2">located_in</data>
+  <data key="d3">데이터 숲은 Layer라는 공간적 배경 내부에 존재합니다.</data>
+</edge>
+<edge source="지능" target="보존">
+  <data key="d2">related_to</data>
+  <data key="d3">지능은 보존을 위해 침묵이라는 대가를 고려해야 합니다.</data>
+</edge>
+<edge source="지능" target="진화">
+  <data key="d2">related_to</data>
+  <data key="d3">지능은 진화를 위해 혼돈이라는 위험을 감수해야 합니다.</data>
+</edge>
+</graph></graphml>

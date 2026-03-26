@@ -19,6 +19,10 @@ class Choice(BaseModel):
         default=None,
         description="대화 대상 NPC 이름 (choice_type이 dialogue일 때)",
     )
+    risky: bool = Field(
+        default=False,
+        description="이 선택지가 위험/도전적인지 여부. True이면 서사 판정이 적용된다",
+    )
 
 
 class Features(BaseModel):
@@ -35,6 +39,14 @@ class StoryNode(BaseModel):
         default_factory=dict,
         description="이 씬에서 발생한 세계 상태 변화 (테마 스키마에 따라 동적 구조)",
     )
+
+
+class EndingEpilogue(BaseModel):
+    """엔딩 에필로그 LLM 응답 모델."""
+    title: str = Field(description="엔딩 제목 (인상적인 한 줄)")
+    epilogue: str = Field(description="에필로그 본문 (3-5 단락, 플레이 내용 반영)")
+    final_line: str = Field(description="마지막 인상적인 한 줄 (여운을 남기는 문장)")
+    tone: str = Field(description="에필로그의 전체 톤 (hopeful, tragic, bittersweet, triumphant 등)")
 
 
 class NPCDialogueResponse(BaseModel):

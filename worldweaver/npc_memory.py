@@ -25,7 +25,7 @@ MEMORY_TYPES = {"dialogue", "event", "emotion", "quest", "observation"}
 # 스테이지 격리 대상: 이 타입만 스테이지가 달라도 기록/조회 차단
 _STAGE_ISOLATED_TYPES = {"event", "observation"}
 
-# pruning 보호 대상: 이 타입은 자동 마모되지 않음 (수동 망각만 가능)
+# pruning 보호 대상: 이 타입의 *노드*는 자동 마모되지 않음 (엣지만 마모)
 _PRUNING_PROTECTED_TYPES = {"quest"}
 
 # 기억 타입별 기본 수명 (씬 수 기준). 이 씬 수가 지나면 마모 대상이 됨
@@ -34,8 +34,12 @@ _MEMORY_LIFESPAN = {
     "event": 8,         # 사건은 중간
     "observation": 5,   # 관찰은 빨리 잊음
     "emotion": 20,      # 감정은 오래 남음
-    "quest": -1,        # 퀘스트는 마모 안 됨 (-1 = 영구)
+    "quest": -1,        # 퀘스트 노드 자체는 영구 (-1). 엣지만 마모됨
 }
+
+# 퀘스트 엣지 마모 설정
+QUEST_EDGE_LIFESPAN = 12       # 이 씬 수 이후부터 엣지 마모 시작
+QUEST_EDGE_FULL_DECAY = 20     # 이 씬 수가 지나면 모든 엣지 끊어짐
 
 # 마모된 기억의 상태
 MEMORY_STATE_ACTIVE = "active"      # 정상
@@ -80,16 +84,16 @@ class NPCMemoryGraph:
 
     @property
     def disposition_label(self) -> str:
-        """호감도를 한글 라벨로 변환."""
+        """Disposition as an English label."""
         if self._disposition >= 0.8:
-            return "깊은 신뢰"
+            return "Deep Trust"
         if self._disposition >= 0.6:
-            return "우호적"
+            return "Friendly"
         if self._disposition >= 0.4:
-            return "중립"
+            return "Neutral"
         if self._disposition >= 0.2:
-            return "경계"
-        return "적대적"
+            return "Wary"
+        return "Hostile"
 
     # ── 기억 기록 ──
 
@@ -273,11 +277,12 @@ class NPCMemoryGraph:
         """씬 카운터를 1 증가시키고 기억 마모를 실행."""
         self._scene_counter += 1
         self._decay_memories()
+        self._decay_quest_edges()
 
     def _decay_memories(self):
         """씬 경과에 따라 기억을 마모시킨다.
 
-        - protected(quest) 노드는 마모되지 않음
+        - protected(quest) 노드는 마모되지 않음 (엣지만 마모됨, _decay_quest_edges 참조)
         - 수명 초과 시: active → faded → forgotten 단계적 전환
         - faded 기억은 수명의 1.5배가 지나면 forgotten으로 전환
         """
@@ -308,17 +313,55 @@ class NPCMemoryGraph:
                 # faded → forgotten
                 self._graph.nodes[node_id]["memory_state"] = MEMORY_STATE_FORGOTTEN
 
+    def _decay_quest_edges(self):
+        """퀘스트 노드의 엣지를 시간 경과에 따라 마모시킨다.
+
+        퀘스트 노드 자체는 보존되지만, 연결된 엣지(인과/시간 관계)가
+        점진적으로 끊어진다. 엣지가 모두 끊어지면 NPC는 퀘스트의
+        맥락(어떤 사건에서 비롯됐는지 등)을 잃어버린다.
+
+        엣지 마모 단계:
+          1. 생성 후 QUEST_EDGE_LIFESPAN 씬 → 엣지에 decayed=True 마킹
+          2. QUEST_EDGE_FULL_DECAY 씬 → 엣지 제거 (끊어짐)
+        """
+        quest_nodes = [
+            nid for nid in self._graph.nodes
+            if self._graph.nodes[nid].get("type") == "quest"
+        ]
+
+        for quest_id in quest_nodes:
+            quest_created = self._graph.nodes[quest_id].get("created_at_scene", 0)
+            age = self._scene_counter - quest_created
+
+            if age < QUEST_EDGE_LIFESPAN:
+                continue
+
+            # 퀘스트에 연결된 모든 엣지 (incoming + outgoing)
+            edges_to_process = (
+                list(self._graph.in_edges(quest_id, data=True))
+                + list(self._graph.out_edges(quest_id, data=True))
+            )
+
+            for u, v, data in edges_to_process:
+                if age >= QUEST_EDGE_FULL_DECAY:
+                    # 엣지 완전 제거 — 퀘스트 맥락 완전 상실
+                    if self._graph.has_edge(u, v):
+                        self._graph.remove_edge(u, v)
+                elif not data.get("decayed", False):
+                    # 엣지 마모 마킹 — 흐릿한 연결
+                    self._graph.edges[u, v]["decayed"] = True
+
     def recover_memory(self, keyword: str) -> list[dict]:
         """대화를 통해 잊혀진 기억을 복원.
 
         keyword가 forgotten 기억의 content에 포함되면 해당 기억을 faded로 복원.
-        퀘스트 관련 기억이 복원되면 다시 protected 마스크를 씌운다.
+        퀘스트 기억이면 노드를 active로 복원하고 끊어진 엣지도 재연결한다.
 
         Returns:
             복원된 기억 목록
         """
         recovered = []
-        for node_id in self._graph.nodes:
+        for node_id in list(self._graph.nodes):
             node = self._graph.nodes[node_id]
             if node.get("memory_state") != MEMORY_STATE_FORGOTTEN:
                 continue
@@ -330,14 +373,191 @@ class NPCMemoryGraph:
                 # 씬 카운터 갱신 → 다시 마모 시작 시점 리셋
                 self._graph.nodes[node_id]["created_at_scene"] = self._scene_counter
 
-                # 퀘스트 기억이 복원되면 보호 마스크 재적용
+                # 퀘스트 기억이 복원되면 active로 복원 + 엣지 재연결
                 if node.get("type") == "quest":
-                    self._graph.nodes[node_id]["protected"] = True
                     self._graph.nodes[node_id]["memory_state"] = MEMORY_STATE_ACTIVE
+                    self._recover_quest_edges(node_id)
 
                 recovered.append({"id": node_id, **self._graph.nodes[node_id]})
 
+        # 퀘스트 노드의 엣지 복원도 시도 (키워드가 퀘스트 내용에 매칭)
+        recovered_quests = self._recover_quest_edges_by_keyword(keyword)
+        for q in recovered_quests:
+            if q not in [r["id"] for r in recovered]:
+                recovered.append({"id": q, **self._graph.nodes[q]})
+
         return recovered
+
+    def _recover_quest_edges(self, quest_id: str):
+        """퀘스트 노드의 끊어진 엣지를 재연결.
+
+        같은 스테이지의 최근 기억들과 시간순(follows) 엣지를 다시 연결하고,
+        씬 카운터를 리셋하여 마모 타이머를 재시작한다.
+        """
+        quest_node = self._graph.nodes[quest_id]
+        quest_stage = quest_node.get("stage", self._current_stage)
+
+        # 씬 카운터 리셋 → 엣지 마모 타이머 재시작
+        self._graph.nodes[quest_id]["created_at_scene"] = self._scene_counter
+
+        # 현재 연결된 엣지의 decayed 마킹 제거
+        for u, v, data in list(self._graph.in_edges(quest_id, data=True)):
+            if data.get("decayed"):
+                self._graph.edges[u, v]["decayed"] = False
+        for u, v, data in list(self._graph.out_edges(quest_id, data=True)):
+            if data.get("decayed"):
+                self._graph.edges[u, v]["decayed"] = False
+
+        # 엣지가 완전히 끊어져 고립된 경우 → 최근 기억과 재연결
+        has_connections = (
+            self._graph.in_degree(quest_id) > 0
+            or self._graph.out_degree(quest_id) > 0
+        )
+        if not has_connections:
+            # 같은 스테이지의 가장 최근 active/faded 기억을 찾아 연결
+            latest = self._get_latest_active_memory(quest_stage)
+            if latest and latest != quest_id:
+                self._graph.add_edge(latest, quest_id, relation="recalled_by")
+
+    def _recover_quest_edges_by_keyword(self, keyword: str) -> list[str]:
+        """키워드로 퀘스트 노드의 끊어진 엣지를 복원.
+
+        forgotten 상태가 아닌 퀘스트 노드라도, 엣지가 끊어져 고립되었거나
+        decayed 상태라면 키워드 매칭으로 엣지를 복원한다.
+        """
+        recovered_ids = []
+        quest_nodes = [
+            nid for nid in self._graph.nodes
+            if self._graph.nodes[nid].get("type") == "quest"
+        ]
+
+        for quest_id in quest_nodes:
+            node = self._graph.nodes[quest_id]
+            content = node.get("content", "")
+            if keyword not in content:
+                continue
+
+            state = node.get("memory_state", MEMORY_STATE_ACTIVE)
+            if state == MEMORY_STATE_FORGOTTEN:
+                continue  # forgotten은 recover_memory에서 처리
+
+            # decayed 엣지가 있거나 고립된 경우 복원
+            has_decayed = any(
+                d.get("decayed") for _, _, d in self._graph.in_edges(quest_id, data=True)
+            ) or any(
+                d.get("decayed") for _, _, d in self._graph.out_edges(quest_id, data=True)
+            )
+            is_isolated = (
+                self._graph.in_degree(quest_id) == 0
+                and self._graph.out_degree(quest_id) == 0
+            )
+
+            if has_decayed or is_isolated:
+                self._recover_quest_edges(quest_id)
+                recovered_ids.append(quest_id)
+
+        return recovered_ids
+
+    def _get_latest_active_memory(self, stage: str) -> str | None:
+        """특정 스테이지에서 가장 최근의 active/faded 기억 노드 ID."""
+        latest = None
+        for node_id in self._graph.nodes:
+            node = self._graph.nodes[node_id]
+            state = node.get("memory_state", MEMORY_STATE_ACTIVE)
+            if state == MEMORY_STATE_FORGOTTEN:
+                continue
+            if node.get("stage") == stage:
+                latest = node_id
+        return latest
+
+    # ── 퀘스트 상태 조회 ──
+
+    def get_quest_memories(self) -> list[dict]:
+        """모든 퀘스트 기억과 엣지 기반 상태를 반환.
+
+        퀘스트 상태는 엣지 연결 상태로 판정:
+          - "active": 엣지가 모두 건강 (decayed 없음, 연결 있음)
+          - "fading": 일부 엣지가 decayed 마킹됨 (NPC가 맥락을 잊어가는 중)
+          - "lost": 엣지가 모두 끊어짐 (NPC가 퀘스트 맥락을 완전히 잃음)
+          - "completed": 퀘스트가 완료된 상태 (수동으로 마킹)
+        """
+        quests = []
+        for node_id in self._graph.nodes:
+            node = self._graph.nodes[node_id]
+            if node.get("type") != "quest":
+                continue
+
+            # 완료 마킹 체크
+            if node.get("quest_completed", False):
+                status = "completed"
+            else:
+                status = self._evaluate_quest_status(node_id)
+
+            quests.append({
+                "id": node_id,
+                "content": node.get("content", ""),
+                "stage": node.get("stage", ""),
+                "npc": self.profile.name,
+                "status": status,
+                "created_at_scene": node.get("created_at_scene", 0),
+                "edge_count": (
+                    self._graph.in_degree(node_id)
+                    + self._graph.out_degree(node_id)
+                ),
+            })
+
+        return quests
+
+    def _evaluate_quest_status(self, quest_id: str) -> str:
+        """퀘스트 노드의 엣지 상태를 기반으로 퀘스트 상태를 판정."""
+        in_edges = list(self._graph.in_edges(quest_id, data=True))
+        out_edges = list(self._graph.out_edges(quest_id, data=True))
+        all_edges = in_edges + out_edges
+
+        # 엣지가 없는 경우: 아직 마모 전(신생 퀘스트)이면 active, 아니면 lost
+        if not all_edges:
+            quest_node = self._graph.nodes[quest_id]
+            created = quest_node.get("created_at_scene", 0)
+            age = self._scene_counter - created
+            if age < QUEST_EDGE_FULL_DECAY:
+                return "active"  # 엣지 없지만 아직 마모 기간 전
+            return "lost"
+
+        decayed_count = sum(1 for _, _, d in all_edges if d.get("decayed", False))
+
+        # 모든 엣지가 decayed → 거의 잊혀진 상태
+        if decayed_count == len(all_edges):
+            return "fading"
+
+        # 일부 엣지가 decayed
+        if decayed_count > 0:
+            return "fading"
+
+        return "active"
+
+    def complete_quest(self, quest_id: str) -> bool:
+        """퀘스트를 완료 처리."""
+        if quest_id not in self._graph:
+            return False
+        node = self._graph.nodes[quest_id]
+        if node.get("type") != "quest":
+            return False
+        self._graph.nodes[quest_id]["quest_completed"] = True
+        return True
+
+    def complete_quest_by_keyword(self, keyword: str) -> list[str]:
+        """키워드로 매칭되는 퀘스트를 완료 처리."""
+        completed = []
+        for node_id in self._graph.nodes:
+            node = self._graph.nodes[node_id]
+            if node.get("type") != "quest":
+                continue
+            if node.get("quest_completed", False):
+                continue
+            if keyword in node.get("content", ""):
+                self._graph.nodes[node_id]["quest_completed"] = True
+                completed.append(node_id)
+        return completed
 
     def refresh_memory(self, node_id: str):
         """특정 기억을 '다시 떠올림' 처리.
@@ -433,8 +653,16 @@ class NPCManager:
             self._npcs[profile.name] = NPCMemoryGraph(profile)
 
     def get_npc(self, name: str) -> NPCMemoryGraph | None:
-        """이름으로 NPC 메모리 그래프를 조회."""
-        return self._npcs.get(name)
+        """이름으로 NPC 메모리 그래프를 조회. 대소문자 무시."""
+        # 정확한 매칭
+        if name in self._npcs:
+            return self._npcs[name]
+        # 대소문자 무시 매칭
+        name_lower = name.lower().strip()
+        for key, npc in self._npcs.items():
+            if key.lower() == name_lower:
+                return npc
+        return None
 
     def get_npcs_at_stage(self, stage: str) -> list[NPCMemoryGraph]:
         """특정 스테이지에 존재하는 NPC 목록."""
@@ -511,6 +739,33 @@ class NPCManager:
                 return False
 
         return True
+
+    def get_all_quests(self) -> list[dict]:
+        """모든 NPC의 퀘스트 기억을 집계하여 반환.
+
+        각 퀘스트에 NPC 이름, 엣지 기반 상태(active/fading/lost/completed)를 포함.
+        """
+        all_quests = []
+        for npc in self._npcs.values():
+            quests = npc.get_quest_memories()
+            all_quests.extend(quests)
+        return all_quests
+
+    def complete_quest(self, npc_name: str, quest_id: str) -> bool:
+        """특정 NPC의 퀘스트를 완료 처리."""
+        npc = self.get_npc(npc_name)
+        if not npc:
+            return False
+        return npc.complete_quest(quest_id)
+
+    def complete_quests_by_keyword(self, keyword: str) -> list[dict]:
+        """키워드로 매칭되는 모든 NPC의 퀘스트를 완료 처리."""
+        results = []
+        for npc in self._npcs.values():
+            completed_ids = npc.complete_quest_by_keyword(keyword)
+            for qid in completed_ids:
+                results.append({"npc": npc.profile.name, "quest_id": qid})
+        return results
 
     def to_summary_string(self, stage: str | None = None) -> str:
         """현재 스테이지의 NPC 상태 요약."""

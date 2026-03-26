@@ -145,28 +145,51 @@ class CombatEngine:
 
     def __init__(self, player: CombatEntity, enemy: CombatEntity,
                  enemy_abilities: list[dict] | None = None,
-                 player_items: list[str] | None = None):
+                 player_items: list[str] | None = None,
+                 item_graph=None):
         self.player = player
         self.enemy = enemy
         self._enemy_abilities = enemy_abilities or []
         self._player_items = player_items or []
+        self._item_graph = item_graph  # 아이템 효과 조회용
         self._round = 0
         self._rounds: list[RoundResult] = []
 
     @classmethod
     def from_template(cls, enemy_template: EnemyTemplate,
-                      world_state) -> CombatEngine:
-        """적 템플릿과 월드 스테이트에서 전투 엔진 생성."""
-        # 플레이어 스탯: 월드 스테이트 게이지에서 파생
-        player_hp = int(world_state.gauges.get("health", 1.0) * 100)
-        player_hp = max(10, player_hp)  # 최소 10
+                      world_state, item_graph=None) -> CombatEngine:
+        """적 템플릿과 월드 스테이트에서 전투 엔진 생성.
 
-        player_attack = 10 + len(world_state.collections.get("inventory", [])) * 2
+        item_graph가 주어지면 아이템 효과(base + 발견된 hidden)와
+        칭호 보너스를 플레이어 스탯에 반영한다.
+        """
+        inventory = list(world_state.collections.get("inventory", []))
+
+        # 기본 스탯
+        player_hp = int(world_state.gauges.get("health", 1.0) * 100)
+        player_hp = max(10, player_hp)
+        player_attack = 10
         player_defense = 5
 
-        # 봉인 게이지가 높으면 공격력 보너스
+        # 봉인 게이지 보너스
         seal_bonus = int(world_state.gauges.get("seal", 0.0) * 10)
         player_attack += seal_bonus
+
+        # 아이템 그래프 기반 스탯 보너스
+        if item_graph:
+            equip_bonus = item_graph.get_total_equipment_bonus(inventory)
+            player_attack += equip_bonus["attack"]
+            player_defense += equip_bonus["defense"]
+            player_hp += equip_bonus["max_hp"]
+
+            # 칭호 보너스
+            title_bonus = item_graph.get_title_bonus()
+            player_attack += title_bonus["attack"]
+            player_defense += title_bonus["defense"]
+            player_hp += title_bonus["max_hp"]
+        else:
+            # 레거시: item_graph 없으면 아이템 개수 기반
+            player_attack += len(inventory) * 2
 
         player = CombatEntity(
             name="수호자",
@@ -188,7 +211,8 @@ class CombatEngine:
             player=player,
             enemy=enemy,
             enemy_abilities=enemy_template.abilities,
-            player_items=list(world_state.collections.get("inventory", [])),
+            player_items=inventory,
+            item_graph=item_graph,
         )
 
     # ── 플레이어 행동 ──
@@ -236,17 +260,24 @@ class CombatEngine:
         )
 
     def execute_player_item(self, item_name: str) -> CombatAction:
-        """아이템 사용 — 회복 또는 버프."""
-        heal = random.randint(15, 30)
-        self.player.hp = min(self.player.max_hp, self.player.hp + heal)
+        """아이템 사용 — ItemGraph 기반 실제 효과 반영."""
+        if self._item_graph:
+            heal_amount = self._item_graph.get_consumable_heal(item_name)
+        else:
+            heal_amount = random.randint(15, 30)
+
+        self.player.hp = min(self.player.max_hp, self.player.hp + heal_amount)
 
         if item_name in self._player_items:
             self._player_items.remove(item_name)
+            # 소모품이면 item_graph에서도 제거
+            if self._item_graph:
+                self._item_graph.remove_item(item_name)
 
         return CombatAction(
             actor=self.player.name,
             action_type="item",
-            detail=f"'{item_name}' 사용 → HP {heal} 회복 (현재: {self.player.hp}/{self.player.max_hp})",
+            detail=f"'{item_name}' 사용 → HP {heal_amount} 회복 (현재: {self.player.hp}/{self.player.max_hp})",
         )
 
     def execute_player_flee(self) -> CombatAction:
@@ -401,8 +432,41 @@ class EnemyRegistry:
             )
             self._enemies[template.name] = template
 
+    @staticmethod
+    def _normalize(name: str) -> str:
+        """이름을 정규화: 소문자, 's 제거, 복수형 → 단수형."""
+        import re
+        n = name.lower().strip()
+        n = re.sub(r"[''']s\b", "", n)  # possessive 's 제거
+        n = re.sub(r"ies\b", "y", n)    # harpies → harpy
+        n = re.sub(r"([^s])s\b", r"\1", n)  # statues → statue (ss는 유지)
+        return n
+
     def get_enemy(self, name: str) -> EnemyTemplate | None:
-        return self._enemies.get(name)
+        """이름으로 적 조회. 정확한 매칭 실패 시 유사 이름 매칭."""
+        # 정확한 매칭
+        if name in self._enemies:
+            return self._enemies[name]
+
+        # 소문자 매칭
+        name_lower = name.lower().strip()
+        for enemy_name, template in self._enemies.items():
+            if enemy_name.lower() == name_lower:
+                return template
+
+        # 정규화 매칭 (복수형, 소유격 제거)
+        name_norm = self._normalize(name)
+        for enemy_name, template in self._enemies.items():
+            if self._normalize(enemy_name) == name_norm:
+                return template
+
+        # 부분 포함 매칭
+        for enemy_name, template in self._enemies.items():
+            en = enemy_name.lower()
+            if en in name_lower or name_lower in en:
+                return template
+
+        return None
 
     def get_enemies_at_stage(self, stage: str) -> list[EnemyTemplate]:
         return [e for e in self._enemies.values() if e.stage == stage]
