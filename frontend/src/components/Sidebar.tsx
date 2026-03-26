@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { api } from "../api/client";
-import type { WorldState, NPCInfo, Quest, Title, InvestigateResult } from "../api/types";
+import type { WorldState, NPCInfo, Quest, Title } from "../api/types";
 import type { Language } from "../i18n";
 import { t } from "../i18n";
 
