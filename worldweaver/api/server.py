@@ -282,7 +282,10 @@ def start_game(req: StartGameRequest, request: Request):
         # 세션 풀 초과
         raise HTTPException(503, str(e))
     except Exception as e:
-        raise HTTPException(500, f"세션 생성 실패: {e}")
+        import traceback
+        traceback.print_exc()
+        _access_logger.error(f"SESSION_CREATE_FAILED | {client_ip} | {type(e).__name__}: {e}")
+        raise HTTPException(500, "게임 시작에 실패했습니다. 잠시 후 다시 시도해주세요.")
 
     t = session.translator
     return {
