@@ -14,6 +14,9 @@ class LoreMemory:
     def __init__(self, lore_dir: Path):
         print("세계관 정보를 로드하여 RAG 메모리 구축 ....")
 
+        # Windows 백슬래시 경로를 POSIX로 정규화 (Docker Linux 환경 호환)
+        lore_dir = Path(str(lore_dir).replace("\\", "/"))
+
         embeddings = GoogleGenerativeAIEmbeddings(model=EMBEDDING_MODEL)
 
         loader = DirectoryLoader(str(lore_dir), glob="**/*.txt")
