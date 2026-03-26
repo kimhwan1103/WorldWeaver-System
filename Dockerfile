@@ -23,7 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Python 의존성
 COPY pyproject.toml ./
-RUN pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir .
 
 # 소스 코드
 COPY worldweaver/ worldweaver/
@@ -43,6 +43,6 @@ ENV DAILY_LLM_LIMIT=500
 ENV CORS_ORIGINS="*"
 ENV PORT=8000
 
-EXPOSE 8000
+EXPOSE ${PORT}
 
-CMD ["python", "-m", "uvicorn", "worldweaver.api.server:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD python -m uvicorn worldweaver.api.server:app --host 0.0.0.0 --port ${PORT:-8000}
