@@ -8,7 +8,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Email](https://img.shields.io/badge/Email-rlaghks1103%40gmail.com-EA4335?logo=gmail&logoColor=white)](mailto:rlaghks1103@gmail.com)
 
-> AI 기반 인터랙티브 스토리 엔진 — 세계관 문서만 넣으면 웹 브라우저에서 즐기는 텍스트 어드벤처
+> **[Demo](https://worldweaver-demo-production.up.railway.app)** | AI 기반 인터랙티브 스토리 엔진 — 세계관 문서만 넣으면 웹 브라우저에서 즐기는 텍스트 어드벤처
 
 <p align="center">
   <img src="docs/screenshots/title.png" alt="WorldWeaver 타이틀 화면" width="720" />
