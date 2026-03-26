@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
 
 // 전역 에러 이벤트 (App에서 구독)
 type ErrorListener = (error: { type: string; message: string }) => void;
