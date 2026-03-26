@@ -462,7 +462,7 @@ class WebGameSession:
         if not template:
             return {"error": f"Enemy '{enemy_name}' not found"}
 
-        engine = CombatEngine.from_template(template, self.world_state, self.item_graph)
+        engine = CombatEngine.from_template(template, self.world_state, self.item_graph, lang=self.language)
         self.active_combat = engine
         self.active_combat_template = template
         self.combat_parent_id = self.current_node_id

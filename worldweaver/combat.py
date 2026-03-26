@@ -23,6 +23,58 @@ COMBAT_ACTIONS = {
     "flee": "도주",
 }
 
+# 전투 텍스트 다국어
+_COMBAT_TEXTS = {
+    "ko": {
+        "damage": "{target}에게 {dmg} 피해",
+        "defend": "방어 태세 (방어력 1.5배)",
+        "skill_fail": "강공격 실패!",
+        "skill_hit": "강공격! {target}에게 {dmg} 피해",
+        "item_use": "'{item}' 사용 → HP {heal} 회복 (현재: {hp}/{max_hp})",
+        "flee_ok": "도주 성공!",
+        "flee_fail": "도주 실패!",
+        "ability": "{name}! {target}에게 {dmg} 피해",
+        "desperate": "필사의 공격! {target}에게 {dmg} 피해",
+        "fled": "(도주됨)",
+        "fallen": "(쓰러짐)",
+        "round": "── 라운드 {n} ──",
+    },
+    "en": {
+        "damage": "Dealt {dmg} damage to {target}",
+        "defend": "Defensive stance (defense x1.5)",
+        "skill_fail": "Power strike missed!",
+        "skill_hit": "Power strike! Dealt {dmg} damage to {target}",
+        "item_use": "Used '{item}' → HP restored by {heal} (now: {hp}/{max_hp})",
+        "flee_ok": "Escaped successfully!",
+        "flee_fail": "Failed to escape!",
+        "ability": "{name}! Dealt {dmg} damage to {target}",
+        "desperate": "Desperate attack! Dealt {dmg} damage to {target}",
+        "fled": "(fled)",
+        "fallen": "(defeated)",
+        "round": "── Round {n} ──",
+    },
+    "ja": {
+        "damage": "{target}に{dmg}ダメージ",
+        "defend": "防御態勢（防御力1.5倍）",
+        "skill_fail": "強攻撃失敗！",
+        "skill_hit": "強攻撃！{target}に{dmg}ダメージ",
+        "item_use": "'{item}'を使用 → HP {heal}回復（現在: {hp}/{max_hp}）",
+        "flee_ok": "逃走成功！",
+        "flee_fail": "逃走失敗！",
+        "ability": "{name}！{target}に{dmg}ダメージ",
+        "desperate": "渾身の一撃！{target}に{dmg}ダメージ",
+        "fled": "（逃走）",
+        "fallen": "（倒れた）",
+        "round": "── ラウンド {n} ──",
+    },
+}
+
+
+def _ct(lang: str, key: str, **kwargs) -> str:
+    """戦闘テキストの多言語取得."""
+    texts = _COMBAT_TEXTS.get(lang, _COMBAT_TEXTS["en"])
+    return texts[key].format(**kwargs)
+
 
 @dataclass
 class EnemyTemplate:
@@ -146,18 +198,20 @@ class CombatEngine:
     def __init__(self, player: CombatEntity, enemy: CombatEntity,
                  enemy_abilities: list[dict] | None = None,
                  player_items: list[str] | None = None,
-                 item_graph=None):
+                 item_graph=None,
+                 lang: str = "ko"):
         self.player = player
         self.enemy = enemy
         self._enemy_abilities = enemy_abilities or []
         self._player_items = player_items or []
         self._item_graph = item_graph  # 아이템 효과 조회용
+        self._lang = lang
         self._round = 0
         self._rounds: list[RoundResult] = []
 
     @classmethod
     def from_template(cls, enemy_template: EnemyTemplate,
-                      world_state, item_graph=None) -> CombatEngine:
+                      world_state, item_graph=None, lang: str = "ko") -> CombatEngine:
         """적 템플릿과 월드 스테이트에서 전투 엔진 생성.
 
         item_graph가 주어지면 아이템 효과(base + 발견된 hidden)와
@@ -213,6 +267,7 @@ class CombatEngine:
             enemy_abilities=enemy_template.abilities,
             player_items=inventory,
             item_graph=item_graph,
+            lang=lang,
         )
 
     # ── 플레이어 행동 ──
@@ -225,7 +280,7 @@ class CombatEngine:
             action_type="attack",
             target=self.enemy.name,
             damage_dealt=damage,
-            detail=f"{self.enemy.name}에게 {damage} 피해",
+            detail=_ct(self._lang, "damage", target=self.enemy.name, dmg=damage),
         )
 
     def execute_player_defend(self) -> CombatAction:
@@ -234,7 +289,7 @@ class CombatEngine:
         return CombatAction(
             actor=self.player.name,
             action_type="defend",
-            detail="방어 태세 (방어력 1.5배)",
+            detail=_ct(self._lang, "defend"),
         )
 
     def execute_player_skill(self) -> CombatAction:
@@ -245,7 +300,7 @@ class CombatEngine:
                 action_type="skill",
                 target=self.enemy.name,
                 damage_dealt=0,
-                detail="강공격 실패!",
+                detail=_ct(self._lang, "skill_fail"),
                 success=False,
             )
 
@@ -256,7 +311,7 @@ class CombatEngine:
             action_type="skill",
             target=self.enemy.name,
             damage_dealt=damage,
-            detail=f"강공격! {self.enemy.name}에게 {damage} 피해",
+            detail=_ct(self._lang, "skill_hit", target=self.enemy.name, dmg=damage),
         )
 
     def execute_player_item(self, item_name: str) -> CombatAction:
@@ -270,14 +325,13 @@ class CombatEngine:
 
         if item_name in self._player_items:
             self._player_items.remove(item_name)
-            # 소모품이면 item_graph에서도 제거
             if self._item_graph:
                 self._item_graph.remove_item(item_name)
 
         return CombatAction(
             actor=self.player.name,
             action_type="item",
-            detail=f"'{item_name}' 사용 → HP {heal_amount} 회복 (현재: {self.player.hp}/{self.player.max_hp})",
+            detail=_ct(self._lang, "item_use", item=item_name, heal=heal_amount, hp=self.player.hp, max_hp=self.player.max_hp),
         )
 
     def execute_player_flee(self) -> CombatAction:
@@ -289,7 +343,7 @@ class CombatEngine:
         return CombatAction(
             actor=self.player.name,
             action_type="flee",
-            detail="도주 성공!" if success else "도주 실패!",
+            detail=_ct(self._lang, "flee_ok") if success else _ct(self._lang, "flee_fail"),
             success=success,
         )
 
@@ -306,7 +360,7 @@ class CombatEngine:
                     action_type="skill",
                     target=self.player.name,
                     damage_dealt=damage,
-                    detail=f"{ability['name']}! {self.player.name}에게 {damage} 피해",
+                    detail=_ct(self._lang, "ability", name=ability["name"], target=self.player.name, dmg=damage),
                 )
 
         # HP가 낮으면 강공격 확률 증가
@@ -318,7 +372,7 @@ class CombatEngine:
                 action_type="skill",
                 target=self.player.name,
                 damage_dealt=damage,
-                detail=f"필사의 공격! {self.player.name}에게 {damage} 피해",
+                detail=_ct(self._lang, "desperate", target=self.player.name, dmg=damage),
             )
 
         # 기본 공격
@@ -328,7 +382,7 @@ class CombatEngine:
             action_type="attack",
             target=self.player.name,
             damage_dealt=damage,
-            detail=f"{self.player.name}에게 {damage} 피해",
+            detail=_ct(self._lang, "damage", target=self.player.name, dmg=damage),
         )
 
     # ── 라운드 실행 ──
@@ -353,9 +407,9 @@ class CombatEngine:
 
         # 도주 성공 시 적 행동 없음
         if player_action == "flee" and p_action.success:
-            e_action = CombatAction(actor=self.enemy.name, action_type="none", detail="(도주됨)")
+            e_action = CombatAction(actor=self.enemy.name, action_type="none", detail=_ct(self._lang, "fled"))
         elif not self.enemy.is_alive:
-            e_action = CombatAction(actor=self.enemy.name, action_type="none", detail="(쓰러짐)")
+            e_action = CombatAction(actor=self.enemy.name, action_type="none", detail=_ct(self._lang, "fallen"))
         else:
             e_action = self.execute_enemy_action()
 
@@ -370,7 +424,7 @@ class CombatEngine:
         )
 
         # 전투 로그 구성
-        log_lines = [f"── 라운드 {self._round} ──"]
+        log_lines = [_ct(self._lang, "round", n=self._round)]
         log_lines.append(f"  {self.player.name}: {p_action.detail}")
         if e_action.action_type != "none":
             log_lines.append(f"  {self.enemy.name}: {e_action.detail}")
