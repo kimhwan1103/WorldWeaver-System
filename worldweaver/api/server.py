@@ -18,6 +18,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from worldweaver.api.session_manager import SessionManager
+from worldweaver.i18n import t
 from worldweaver.prompt_loader import get_game_config, list_themes, load_theme
 
 # ── 데모 모드 설정 ──
@@ -66,7 +67,7 @@ def _check_rate_limit(client_ip: str) -> bool:
     now = time.time()
     timestamps = _rate_limit_store[client_ip]
     # 윈도우 밖의 오래된 기록 제거
-    _rate_limit_store[client_ip] = [t for t in timestamps if now - t < RATE_LIMIT_WINDOW]
+    _rate_limit_store[client_ip] = [ts for ts in timestamps if now - ts < RATE_LIMIT_WINDOW]
     if len(_rate_limit_store[client_ip]) >= RATE_LIMIT_MAX_REQUESTS:
         return False
     _rate_limit_store[client_ip].append(now)
@@ -113,7 +114,7 @@ async def rate_limit_and_logging_middleware(request: Request, call_next):
         _access_logger.warning(f"RATE_LIMITED | {client_ip} | {request.method} {path}")
         return JSONResponse(
             status_code=429,
-            content={"detail": "요청이 너무 많습니다. 잠시 후 다시 시도해주세요."},
+            content={"detail": t("ko", "err_rate_limit")},
         )
 
     # 접속 로그
@@ -124,7 +125,7 @@ async def rate_limit_and_logging_middleware(request: Request, call_next):
         _access_logger.error(f"ERROR | {client_ip} | {request.method} {path}")
         return JSONResponse(
             status_code=500,
-            content={"detail": "서버 내부 오류가 발생했습니다."},
+            content={"detail": t("ko", "err_server")},
         )
     elapsed = round((time.time() - start) * 1000)
     _access_logger.info(f"{response.status_code} | {client_ip} | {request.method} {path} | {elapsed}ms")
@@ -144,7 +145,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     _access_logger.error(f"UNHANDLED | {_get_client_ip(request)} | {request.method} {request.url.path} | {type(exc).__name__}: {exc}")
     return JSONResponse(
         status_code=500,
-        content={"detail": "서버 내부 오류가 발생했습니다."},
+        content={"detail": t("ko", "err_server")},
     )
 
 
@@ -155,7 +156,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         _access_logger.error(f"HTTP_{exc.status_code} | {_get_client_ip(request)} | {request.method} {request.url.path} | {exc.detail}")
         return JSONResponse(
             status_code=exc.status_code,
-            content={"detail": "서버 내부 오류가 발생했습니다."},
+            content={"detail": t("ko", "err_server")},
         )
     return JSONResponse(
         status_code=exc.status_code,
@@ -240,7 +241,7 @@ def get_theme_detail(theme_name: str):
     try:
         theme = load_theme(theme_name)
     except Exception:
-        raise HTTPException(404, f"테마 '{theme_name}' 없음")
+        raise HTTPException(404, t("ko", "err_theme_not_found", name=theme_name))
 
     return {
         "name": theme["name"],
@@ -266,7 +267,7 @@ def _resolve_session(session_id: str, request: Request) -> "WebGameSession":
     client_ip = _get_client_ip(request)
     session = manager.get_session(session_id, client_ip=client_ip)
     if not session:
-        raise HTTPException(404, "세션 없음")
+        raise HTTPException(404, t("ko", "err_session_not_found"))
     return session
 
 
@@ -285,17 +286,17 @@ def start_game(req: StartGameRequest, request: Request):
         import traceback
         traceback.print_exc()
         _access_logger.error(f"SESSION_CREATE_FAILED | {client_ip} | {type(e).__name__}: {e}")
-        raise HTTPException(500, "게임 시작에 실패했습니다. 잠시 후 다시 시도해주세요.")
+        raise HTTPException(500, t("ko", "err_start_failed"))
 
-    t = session.translator
+    tr = session.translator
     return {
         "session_id": session.session_id,
-        "theme": t.tr(session.theme.get("display_name", ""), "display_name"),
-        "description": t.tr(session.theme.get("description", ""), "description"),
-        "initial_prompt": t.tr(session.theme.get("initial_prompt", ""), "initial_prompt"),
+        "theme": tr.tr(session.theme.get("display_name", ""), "display_name"),
+        "description": tr.tr(session.theme.get("description", ""), "description"),
+        "initial_prompt": tr.tr(session.theme.get("initial_prompt", ""), "initial_prompt"),
         "world_state": session._get_state_snapshot(),
         "enemies": [
-            t.tr(name, f"enemies.{name}.name")
+            tr.tr(name, f"enemies.{name}.name")
             for name in session.enemy_registry.get_all_enemy_names()
         ],
     }
@@ -305,7 +306,7 @@ def start_game(req: StartGameRequest, request: Request):
 def generate_scene(req: ChoiceRequest, request: Request):
     """선택지를 선택하여 다음 씬 생성."""
     if not _check_daily_llm_limit():
-        raise HTTPException(429, "오늘의 AI 사용량을 초과했습니다. 내일 다시 시도해주세요.")
+        raise HTTPException(429, t("ko", "err_daily_limit"))
 
     session = _resolve_session(req.session_id, request)
 
@@ -316,7 +317,7 @@ def generate_scene(req: ChoiceRequest, request: Request):
         try:
             selected = session.last_choices[req.choice_index]
         except IndexError:
-            raise HTTPException(400, "잘못된 선택지 인덱스")
+            raise HTTPException(400, t("ko", "err_bad_choice"))
 
         # 대화/전투 선택지 체크
         if selected.get("choice_type") == "dialogue":
@@ -373,7 +374,7 @@ def end_game(session_id: str):
 def start_dialogue(req: DialogueRequest, request: Request):
     """NPC 대화 시작 — NPC가 먼저 인사."""
     if not _check_daily_llm_limit():
-        raise HTTPException(429, "오늘의 AI 사용량을 초과했습니다. 내일 다시 시도해주세요.")
+        raise HTTPException(429, t("ko", "err_daily_limit"))
 
     session = _resolve_session(req.session_id, request)
 
@@ -389,7 +390,7 @@ def start_dialogue(req: DialogueRequest, request: Request):
 def dialogue(req: DialogueRequest, request: Request):
     """NPC 대화 (플레이어 메시지에 대한 NPC 응답)."""
     if not _check_daily_llm_limit():
-        raise HTTPException(429, "오늘의 AI 사용량을 초과했습니다. 내일 다시 시도해주세요.")
+        raise HTTPException(429, t("ko", "err_daily_limit"))
 
     session = _resolve_session(req.session_id, request)
 
@@ -435,7 +436,7 @@ def check_game_over(session_id: str, request: Request):
 def generate_game_over(session_id: str, request: Request):
     """게임오버 씬 생성. 그래프 상태를 반영한 LLM 사망/실패 씬."""
     if not _check_daily_llm_limit():
-        raise HTTPException(429, "오늘의 AI 사용량을 초과했습니다. 내일 다시 시도해주세요.")
+        raise HTTPException(429, t("ko", "err_daily_limit"))
 
     session = _resolve_session(session_id, request)
 
@@ -477,16 +478,16 @@ def load_game(req: LoadGameRequest):
     try:
         session = manager.create_session(theme_name, language)
     except Exception as e:
-        raise HTTPException(500, f"세션 생성 실패: {e}")
+        raise HTTPException(500, t("ko", "err_session_create"))
 
     try:
         session.load_game(save_data)
     except Exception as e:
-        raise HTTPException(500, f"로드 실패: {e}")
+        raise HTTPException(500, t("ko", "err_load_failed"))
 
     # 로드 후 현재 상태 반환
     npcs_here = session.npc_manager.get_npcs_at_stage(session.current_stage)
-    t = session.translator
+    tr = session.translator
 
     return {
         "session_id": session.session_id,
@@ -496,8 +497,8 @@ def load_game(req: LoadGameRequest):
         "choices": session.last_choices,
         "npcs": [
             {
-                "name": t.tr(n.profile.name, f"npc.{n.profile.name}.name"),
-                "role": t.tr(n.profile.role, f"npc.{n.profile.name}.role"),
+                "name": tr.tr(n.profile.name, f"npc.{n.profile.name}.name"),
+                "role": tr.tr(n.profile.role, f"npc.{n.profile.name}.role"),
                 "disposition": n.disposition_label,
             }
             for n in npcs_here
@@ -528,7 +529,7 @@ class TravelRequest(BaseModel):
 def travel(req: TravelRequest, request: Request):
     """스테이지 이동. 해금 조건 확인 후 이동 씬 생성."""
     if not _check_daily_llm_limit():
-        raise HTTPException(429, "오늘의 AI 사용량을 초과했습니다. 내일 다시 시도해주세요.")
+        raise HTTPException(429, t("ko", "err_daily_limit"))
 
     session = _resolve_session(req.session_id, request)
 
@@ -557,7 +558,7 @@ def check_ending(session_id: str, request: Request):
 def generate_ending(session_id: str, request: Request):
     """엔딩 에필로그 생성. 스토리 그래프 + 월드 스테이트 + NPC 관계를 종합하여 LLM이 에필로그를 작성."""
     if not _check_daily_llm_limit():
-        raise HTTPException(429, "오늘의 AI 사용량을 초과했습니다. 내일 다시 시도해주세요.")
+        raise HTTPException(429, t("ko", "err_daily_limit"))
 
     session = _resolve_session(session_id, request)
 
@@ -583,7 +584,7 @@ def investigate_item(req: InvestigateItemRequest, request: Request):
 
     result = session.investigate_item(req.item_name)
     if not result:
-        return {"discovered": False, "message": "발견할 히든 효과가 없습니다"}
+        return {"discovered": False, "message": t("ko", "no_hidden_effect")}
 
     return {"discovered": True, **result}
 
@@ -638,7 +639,7 @@ def complete_quest(req: QuestCompleteRequest, request: Request):
 
     success = session.npc_manager.complete_quest(req.npc_name, req.quest_id)
     if not success:
-        raise HTTPException(400, "퀘스트 완료 실패")
+        raise HTTPException(400, t("ko", "err_quest_fail"))
 
     return {"status": "completed", "quests": session._get_quests_snapshot()}
 
@@ -698,7 +699,7 @@ async def websocket_game(websocket: WebSocket, session_id: str):
     # WebSocket에서는 IP 검증 불가 (프록시 환경) → 세션 존재만 확인
     session = manager.get_session(session_id)
     if not session:
-        await websocket.send_json({"error": "세션 없음"})
+        await websocket.send_json({"error": t("ko", "err_session_not_found")})
         await websocket.close()
         return
 
@@ -713,9 +714,9 @@ async def websocket_game(websocket: WebSocket, session_id: str):
 
             # 메시지 rate limit 체크
             now = time.time()
-            ws_message_times[:] = [t for t in ws_message_times if now - t < WS_RATE_WINDOW]
+            ws_message_times[:] = [ts for ts in ws_message_times if now - ts < WS_RATE_WINDOW]
             if len(ws_message_times) >= WS_RATE_MAX:
-                await websocket.send_json({"error": "요청이 너무 빠릅니다. 잠시 후 다시 시도해주세요."})
+                await websocket.send_json({"error": t("ko", "err_ws_rate")})
                 continue
             ws_message_times.append(now)
 
@@ -723,7 +724,7 @@ async def websocket_game(websocket: WebSocket, session_id: str):
             msg_type = data.get("type", "")
             llm_types = {"scene", "dialogue", "combat_start"}
             if msg_type in llm_types and not _check_daily_llm_limit():
-                await websocket.send_json({"error": "오늘의 AI 사용량을 초과했습니다."})
+                await websocket.send_json({"error": t("ko", "err_daily_limit")})
                 continue
 
             if msg_type == "scene":
@@ -734,7 +735,7 @@ async def websocket_game(websocket: WebSocket, session_id: str):
                     try:
                         selected = session.last_choices[choice_index]
                     except IndexError:
-                        await websocket.send_json({"error": "잘못된 선택지"})
+                        await websocket.send_json({"error": t("ko", "err_bad_choice_ws")})
                         continue
 
                     if selected.get("choice_type") == "dialogue":
@@ -808,9 +809,9 @@ class BuilderAuthRequest(BaseModel):
 def builder_auth(req: BuilderAuthRequest):
     """빌더 비밀번호 검증."""
     if DEMO_MODE:
-        raise HTTPException(403, "데모 모드에서는 테마 빌더를 사용할 수 없습니다.")
+        raise HTTPException(403, t("ko", "builder_demo_blocked"))
     if req.password != _BUILDER_PASSWORD:
-        raise HTTPException(403, "비밀번호가 올바르지 않습니다")
+        raise HTTPException(403, t("ko", "builder_wrong_pw"))
     return {"authorized": True}
 
 
@@ -818,7 +819,7 @@ def builder_auth(req: BuilderAuthRequest):
 async def upload_lore_files(files: list[UploadFile]):
     """세계관 문서 파일 업로드. 임시 폴더에 저장하고 build_id를 반환."""
     if DEMO_MODE:
-        raise HTTPException(403, "데모 모드에서는 테마 빌더를 사용할 수 없습니다.")
+        raise HTTPException(403, t("ko", "builder_demo_blocked"))
     build_id = uuid.uuid4().hex[:12]
     upload_dir = Path("uploads") / build_id
     upload_dir.mkdir(parents=True, exist_ok=True)
@@ -843,7 +844,7 @@ async def upload_lore_files(files: list[UploadFile]):
 
     if not saved:
         shutil.rmtree(upload_dir, ignore_errors=True)
-        raise HTTPException(400, "유효한 .txt 파일이 없습니다")
+        raise HTTPException(400, t("ko", "builder_no_files"))
 
     _build_jobs[build_id] = {
         "status": "uploaded",
@@ -862,17 +863,17 @@ async def upload_lore_files(files: list[UploadFile]):
 def start_build(build_id: str, req: ThemeBuildRequest):
     """업로드된 문서로 테마 빌드 시작 (백그라운드)."""
     if DEMO_MODE:
-        raise HTTPException(403, "데모 모드에서는 테마 빌더를 사용할 수 없습니다.")
+        raise HTTPException(403, t("ko", "builder_demo_blocked"))
     job = _build_jobs.get(build_id)
     if not job:
-        raise HTTPException(404, "빌드 작업 없음")
+        raise HTTPException(404, t("ko", "builder_not_found"))
 
     if job["status"] not in ("uploaded", "error"):
         raise HTTPException(400, f"현재 상태: {job['status']}")
 
     job["status"] = "building"
     job["progress"] = 0
-    job["message"] = "테마 빌드 시작..."
+    job["message"] = t("ko", "builder_building")
     job["theme_name"] = req.theme_name
     job["error"] = None
 
@@ -928,7 +929,7 @@ def _run_build(build_id: str):
 
         job["progress"] = 100
         job["status"] = "completed"
-        job["message"] = f"테마 '{theme_data['display_name']}' 생성 완료!"
+        job["message"] = t("ko", "builder_complete", name=theme_data['display_name'])
         job["result"] = {
             "theme_name": theme_data["name"],
             "display_name": theme_data.get("display_name", ""),
@@ -940,8 +941,8 @@ def _run_build(build_id: str):
     except Exception as e:
         _access_logger.error(f"BUILD_FAILED | {build_id} | {type(e).__name__}: {e}")
         job["status"] = "error"
-        job["message"] = "테마 빌드 중 오류가 발생했습니다."
-        job["error"] = "빌드 처리 중 문제가 발생했습니다. 다시 시도해주세요."
+        job["message"] = t("ko", "builder_error")
+        job["error"] = t("ko", "builder_error_detail")
 
     finally:
         # 임시 업로드 폴더 정리 (영구 경로로 복사 완료 후)
@@ -954,7 +955,7 @@ def get_build_status(build_id: str):
     """빌드 진행 상태 조회."""
     job = _build_jobs.get(build_id)
     if not job:
-        raise HTTPException(404, "빌드 작업 없음")
+        raise HTTPException(404, t("ko", "builder_not_found"))
 
     response = {
         "build_id": build_id,

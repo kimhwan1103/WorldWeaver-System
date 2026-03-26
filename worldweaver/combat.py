@@ -12,6 +12,8 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, field
 
+from worldweaver.i18n import t
+
 
 # ── 전투 행동 ──
 
@@ -166,27 +168,42 @@ class CombatResult:
     loot: list[str]
     total_damage_dealt: int = 0
     total_damage_taken: int = 0
+    lang: str = "ko"
 
     def to_graph_summary(self) -> str:
         """그래프 노드에 기록할 전투 요약."""
-        outcome_text = {"victory": "승리", "defeat": "패배", "flee": "도주"}
-        lines = [
-            f"[전투: {self.enemy_name}] 결과: {outcome_text.get(self.outcome, self.outcome)}",
-            f"총 {len(self.rounds)}라운드 | 가한 피해: {self.total_damage_dealt} | 받은 피해: {self.total_damage_taken}",
-        ]
+        outcome_text = {
+            "victory": t(self.lang, "result_victory"),
+            "defeat": t(self.lang, "result_defeat"),
+            "flee": t(self.lang, "result_flee"),
+        }
+        summary = t(
+            self.lang, "combat_summary",
+            name=self.enemy_name,
+            outcome=outcome_text.get(self.outcome, self.outcome),
+            rounds=len(self.rounds),
+            dealt=self.total_damage_dealt,
+            taken=self.total_damage_taken,
+        )
         if self.loot:
-            lines.append(f"획득: {', '.join(self.loot)}")
-        return " | ".join(lines)
+            summary += " | " + t(self.lang, "combat_loot", items=", ".join(self.loot))
+        return summary
 
     def to_round_summaries(self) -> list[str]:
         """각 라운드의 요약 텍스트 목록 (그래프 노드용)."""
         summaries = []
         for r in self.rounds:
-            summary = (
-                f"라운드 {r.round_number}: "
-                f"플레이어({r.player_action.action_type}) → {r.player_action.detail} | "
-                f"적({r.enemy_action.action_type}) → {r.enemy_action.detail} | "
-                f"HP: {r.player_hp}/{r.player_max_hp} vs {r.enemy_hp}/{r.enemy_max_hp}"
+            summary = t(
+                self.lang, "round_summary",
+                n=r.round_number,
+                p_type=r.player_action.action_type,
+                p_detail=r.player_action.detail,
+                e_type=r.enemy_action.action_type,
+                e_detail=r.enemy_action.detail,
+                p_hp=r.player_hp,
+                p_max=r.player_max_hp,
+                e_hp=r.enemy_hp,
+                e_max=r.enemy_max_hp,
             )
             summaries.append(summary)
         return summaries
@@ -246,7 +263,7 @@ class CombatEngine:
             player_attack += len(inventory) * 2
 
         player = CombatEntity(
-            name="수호자",
+            name=t(lang, "player_name"),
             max_hp=player_hp,
             hp=player_hp,
             attack=player_attack,
@@ -460,6 +477,7 @@ class CombatEngine:
             loot=[],  # 승리 시 game.py에서 설정
             total_damage_dealt=total_dealt,
             total_damage_taken=total_taken,
+            lang=self._lang,
         )
 
 

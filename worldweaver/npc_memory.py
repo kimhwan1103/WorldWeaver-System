@@ -17,6 +17,8 @@ from pathlib import Path
 
 import networkx as nx
 
+from worldweaver.i18n import t
+
 
 # ── 기억 노드 타입 ──
 
@@ -633,8 +635,9 @@ class NPCMemoryGraph:
 class NPCManager:
     """게임 세션 내 모든 NPC의 메모리 그래프를 관리."""
 
-    def __init__(self, theme: dict):
+    def __init__(self, theme: dict, lang: str = "ko"):
         self._npcs: dict[str, NPCMemoryGraph] = {}
+        self._lang = lang
         self._load_from_theme(theme)
 
     def _load_from_theme(self, theme: dict):
@@ -643,9 +646,9 @@ class NPCManager:
         for p in profiles:
             profile = NPCProfile(
                 name=p["name"],
-                personality=p.get("personality", "중립적인 성격"),
-                tone=p.get("tone", "평범한 말투"),
-                role=p.get("role", "일반"),
+                personality=p.get("personality", t(self._lang, "default_personality")),
+                tone=p.get("tone", t(self._lang, "default_tone")),
+                role=p.get("role", t(self._lang, "default_role")),
                 stage=p.get("stage", "default"),
                 initial_disposition=p.get("initial_disposition", 0.5),
                 trigger_conditions=p.get("trigger_conditions", []),
@@ -777,6 +780,6 @@ class NPCManager:
         for npc in npcs:
             lines.append(
                 f"  {npc.profile.name}({npc.profile.role}) — "
-                f"호감도: {npc.disposition_label}"
+                f"{t(self._lang, 'npc_disposition', label=npc.disposition_label)}"
             )
         return "\n".join(lines)

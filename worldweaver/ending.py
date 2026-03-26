@@ -11,6 +11,7 @@ import operator
 from dataclasses import dataclass
 
 from worldweaver.graph import StoryGraph
+from worldweaver.i18n import t
 from worldweaver.npc_memory import NPCManager
 from worldweaver.world_state import WorldState
 
@@ -179,11 +180,13 @@ class GameOverEvaluator:
         world_state: WorldState,
         story_graph: StoryGraph,
         npc_manager: NPCManager,
+        lang: str = "ko",
     ):
         self._theme_conditions = theme.get("game_over_conditions", [])
         self._state = world_state
         self._graph = story_graph
         self._npc = npc_manager
+        self._lang = lang
 
     def evaluate(self) -> GameOverResult | None:
         """게임오버 조건을 체크. 해당하면 결과 반환, 아니면 None."""
@@ -221,7 +224,7 @@ class GameOverEvaluator:
             return GameOverResult(
                 game_over_id="health_zero",
                 prompt_hint="The guardian's life force is completely depleted. Write a dramatic death scene that reflects their journey and the state of the world they leave behind.",
-                cause="체력이 완전히 소진되었다",
+                cause=t(self._lang, "gameover_health"),
                 factors={"health": f"{health:.2f}"},
             )
         return None
@@ -230,19 +233,21 @@ class GameOverEvaluator:
         """스토리 그래프에서 연속 전투 패배 3회를 체크."""
         path = self._graph.get_path()
         consecutive = 0
+        result_prefix = t(self._lang, "combat_result_title", outcome="")
+        defeat_text = t(self._lang, "result_defeat")
         for node_id in reversed(path):
             node = self._graph._graph.nodes.get(node_id, {})
             title = node.get("title", "")
-            if "전투 결과" in title and "패배" in title:
+            if result_prefix in title and defeat_text in title:
                 consecutive += 1
-            elif "전투 결과" in title:
+            elif result_prefix in title:
                 break  # 패배 아닌 전투 결과 → 연속 끊김
             # 전투 결과가 아닌 노드는 건너뜀
         if consecutive >= 3:
             return GameOverResult(
                 game_over_id="consecutive_defeats",
                 prompt_hint="After suffering defeat after defeat, the guardian's body and spirit are broken. Write a scene where the accumulated wounds and exhaustion finally overwhelm them.",
-                cause="연속 전투 패배로 더 이상 싸울 수 없다",
+                cause=t(self._lang, "gameover_combat"),
                 factors={"consecutive_defeats": str(consecutive)},
             )
         return None
@@ -260,7 +265,7 @@ class GameOverEvaluator:
             return GameOverResult(
                 game_over_id="all_hostile",
                 prompt_hint="Every ally has turned against the guardian. Alone and surrounded by former friends turned enemies, there is no one left to turn to. Write a scene of ultimate isolation and betrayal.",
-                cause="모든 동맹이 적대적으로 변했다",
+                cause=t(self._lang, "gameover_allies"),
                 factors={"hostile_npcs": f"{hostile_count}/{len(all_npcs)}"},
             )
         return None
@@ -280,7 +285,7 @@ class GameOverEvaluator:
             return GameOverResult(
                 game_over_id="forgotten_collapse",
                 prompt_hint="Every quest has been forgotten by the NPCs. The threads of fate are severed. Combined with rising corruption, the world's last defenses crumble. Write a scene where the consequences of neglect and corruption consume everything.",
-                cause="모든 퀘스트가 잊혀지고, 타락이 세계를 삼킨다",
+                cause=t(self._lang, "gameover_quests"),
                 factors={"quests_lost": f"{lost}/{total}", "corruption": f"{corruption:.2f}"},
             )
         return None
@@ -313,7 +318,7 @@ class GameOverEvaluator:
         return GameOverResult(
             game_over_id=cond.get("id", "custom"),
             prompt_hint=cond.get("prompt_hint", "The journey ends here."),
-            cause=cond.get("cause", "게임오버 조건 충족"),
+            cause=cond.get("cause", t(self._lang, "gameover_gauge")),
             factors={"condition_id": cond.get("id", "custom")},
         )
 
@@ -348,6 +353,7 @@ def build_ending_prompt_context(
     graph: StoryGraph,
     world_state: WorldState,
     npc_manager: NPCManager,
+    lang: str = "ko",
 ) -> dict:
     """엔딩 LLM 프롬프트에 주입할 컨텍스트를 구성.
 
@@ -367,7 +373,7 @@ def build_ending_prompt_context(
             quest_info = f" | 퀘스트: {', '.join(statuses)}"
         npc_lines.append(
             f"  {name}({npc.profile.role}): "
-            f"호감도 {npc.disposition_label}({npc.disposition:.1f}){quest_info}"
+            f"{t(lang, 'npc_disposition', label=npc.disposition_label)}({npc.disposition:.1f}){quest_info}"
         )
     npc_relationships = "\n".join(npc_lines) if npc_lines else "(NPC 없음)"
 

@@ -14,6 +14,7 @@ import random
 from dataclasses import dataclass, field
 
 from worldweaver.graph import StoryGraph
+from worldweaver.i18n import t
 from worldweaver.item_graph import ItemGraph
 from worldweaver.npc_memory import NPCManager, MEMORY_STATE_ACTIVE, MEMORY_STATE_FADED
 from worldweaver.world_state import WorldState
@@ -62,11 +63,13 @@ class JudgmentEngine:
         story_graph: StoryGraph,
         npc_manager: NPCManager,
         item_graph: ItemGraph | None = None,
+        lang: str = "ko",
     ):
         self._state = world_state
         self._graph = story_graph
         self._npc = npc_manager
         self._items = item_graph
+        self._lang = lang
 
     def judge(self, choice_text: str, scene_context: str = "") -> JudgmentResult:
         """선택지에 대한 종합 판정을 수행.
@@ -161,7 +164,7 @@ class JudgmentEngine:
             if base_weight > 0:
                 factors.append(JudgmentFactor(
                     source="item",
-                    description=f"소지 중인 '{item_name}'의 힘이 작용한다",
+                    description=t(self._lang, "judge_item_power", item=item_name),
                     weight=min(0.4, base_weight),
                 ))
 
@@ -169,7 +172,7 @@ class JudgmentEngine:
             if info.get("hidden_discovered"):
                 factors.append(JudgmentFactor(
                     source="item",
-                    description=f"'{item_name}'의 숨겨진 힘을 알고 있다",
+                    description=t(self._lang, "judge_item_hidden", item=item_name),
                     weight=0.3 * relevance,
                 ))
 
@@ -232,13 +235,13 @@ class JudgmentEngine:
                 if status == "active":
                     factors.append(JudgmentFactor(
                         source="quest",
-                        description=f"{name}에게 받은 임무의 맥락이 도움이 된다",
+                        description=t(self._lang, "judge_quest_help", name=name),
                         weight=0.3 * q_relevance,
                     ))
                 elif status == "lost":
                     factors.append(JudgmentFactor(
                         source="quest",
-                        description=f"잊혀진 임무의 빈자리가 불안감을 준다",
+                        description=t(self._lang, "judge_quest_lost"),
                         weight=-0.3 * q_relevance,
                     ))
 
@@ -255,17 +258,17 @@ class JudgmentEngine:
             combat_text = f"{summary.get('title', '')} {summary.get('description', '')}".lower()
             relevance = self._keyword_overlap(context, combat_text)
             if relevance > 0:
-                is_victory = "승리" in summary.get("title", "")
+                is_victory = t(self._lang, "result_victory") in summary.get("title", "")
                 if is_victory:
                     factors.append(JudgmentFactor(
                         source="combat",
-                        description="유사한 적과 싸워 승리한 경험이 있다",
+                        description=t(self._lang, "judge_combat_win"),
                         weight=0.3 * relevance,
                     ))
                 else:
                     factors.append(JudgmentFactor(
                         source="combat",
-                        description="이전 패배의 교훈이 떠오른다",
+                        description=t(self._lang, "judge_combat_loss"),
                         weight=0.1 * relevance,
                     ))
 
@@ -281,13 +284,13 @@ class JudgmentEngine:
         if health < 0.3:
             factors.append(JudgmentFactor(
                 source="gauge",
-                description="체력이 위태롭다",
+                description=t(self._lang, "judge_health_low"),
                 weight=-0.3,
             ))
         elif health > 0.8:
             factors.append(JudgmentFactor(
                 source="gauge",
-                description="충분한 체력으로 자신감이 있다",
+                description=t(self._lang, "judge_health_high"),
                 weight=0.1,
             ))
 
@@ -295,7 +298,7 @@ class JudgmentEngine:
         if corruption > 0.7:
             factors.append(JudgmentFactor(
                 source="gauge",
-                description="타락의 기운이 판단력을 흐린다",
+                description=t(self._lang, "judge_corruption"),
                 weight=-0.3,
             ))
 
@@ -303,7 +306,7 @@ class JudgmentEngine:
         if seal > 0.5:
             factors.append(JudgmentFactor(
                 source="gauge",
-                description="축적된 봉인력이 보호한다",
+                description=t(self._lang, "judge_seal"),
                 weight=0.2,
             ))
 
@@ -343,18 +346,18 @@ class JudgmentEngine:
         # 판정 결과 지시
         if success:
             if outcome == "favorable":
-                lines.append("이 선택은 확실히 성공합니다. 플레이어의 축적된 경험과 준비가 빛을 발합니다.")
+                lines.append(t(self._lang, "judge_success_overwhelming"))
             elif outcome == "neutral":
-                lines.append("이 선택은 성공하지만 쉽지 않았습니다. 약간의 고생 끝에 목표를 달성합니다.")
+                lines.append(t(self._lang, "judge_success_clean"))
             else:
-                lines.append("운 좋게 성공합니다. 하지만 위태로운 순간이 있었음을 서사에 반영하세요.")
+                lines.append(t(self._lang, "judge_success_narrow"))
         else:
             if outcome == "unfavorable":
-                lines.append("이 선택은 실패합니다. 준비 부족이 원인입니다. 하지만 완전한 재앙은 아닙니다 — 대안이 열립니다.")
+                lines.append(t(self._lang, "judge_fail_serious"))
             elif outcome == "neutral":
-                lines.append("이 선택은 실패합니다. 예상치 못한 변수가 생깁니다. 체력이나 자원에 소량의 손실이 있습니다.")
+                lines.append(t(self._lang, "judge_fail_minor"))
             else:
-                lines.append("아쉽게 실패합니다. 하지만 시도 자체에서 무언가를 배웁니다.")
+                lines.append(t(self._lang, "judge_fail_catastrophic"))
 
         # 근거를 서사 힌트로 변환 (상위 3개)
         sorted_factors = sorted(factors, key=lambda f: abs(f.weight), reverse=True)
@@ -362,17 +365,17 @@ class JudgmentEngine:
         negative = [f for f in sorted_factors if f.weight < 0][:1]
 
         if positive:
-            lines.append("서사에 자연스럽게 녹여야 할 유리한 요소:")
+            lines.append(t(self._lang, "judge_advantage") + ":")
             for f in positive:
                 lines.append(f"  - {f.description}")
 
         if negative:
-            lines.append("서사에 암시해야 할 불리한 요소:")
+            lines.append(t(self._lang, "judge_disadvantage") + ":")
             for f in negative:
                 lines.append(f"  - {f.description}")
 
         if not positive and not negative:
-            lines.append("특별한 유/불리 요소 없이 순수한 상황 판단으로 진행됩니다.")
+            lines.append(t(self._lang, "judge_success_clean"))
 
         return "\n".join(lines)
 
@@ -398,7 +401,7 @@ class JudgmentEngine:
         return min(1.0, overlap / max(2, min(len(ctx_words), len(tgt_words))))
 
 
-def build_judgment_prompt_section(result: JudgmentResult) -> str:
+def build_judgment_prompt_section(result: JudgmentResult, lang: str = "ko") -> str:
     """판정 결과를 프롬프트 섹션 문자열로 변환.
 
     story_template의 directives에 주입하기 위한 형식.

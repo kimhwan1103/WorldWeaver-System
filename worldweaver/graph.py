@@ -5,6 +5,8 @@ from pathlib import Path
 
 import networkx as nx
 
+from worldweaver.i18n import t
+
 
 class StoryGraph:
     """NetworkX DiGraph 기반 스토리 분기 그래프 관리."""
@@ -22,10 +24,10 @@ class StoryGraph:
     def edge_count(self) -> int:
         return len(self._graph.edges)
 
-    def add_start_node(self, prompt: str) -> str:
+    def add_start_node(self, prompt: str, lang: str = "ko") -> str:
         """시작 노드를 추가하고 ID를 반환."""
-        node_id = "시작"
-        self._graph.add_node(node_id, title="시작", prompt=prompt)
+        node_id = self.START_NODE_ID
+        self._graph.add_node(node_id, title=t(lang, "start_node"), prompt=prompt)
         return node_id
 
     def add_scene(self, node_data: dict, parent_id: str, choice_text: str,
@@ -45,23 +47,27 @@ class StoryGraph:
         return node_id
 
     def add_combat_round(self, combat_summary: str, parent_id: str,
-                         round_number: int) -> str:
+                         round_number: int, lang: str = "ko") -> str:
         """전투 라운드를 그래프 노드로 기록."""
         node_id = f"combat_r{round_number}_{uuid.uuid4().hex[:6]}"
         self._graph.add_node(
             node_id,
-            title=f"전투 라운드 {round_number}",
+            title=t(lang, "combat_round_title", n=round_number),
             description=combat_summary,
             node_type="combat",
         )
-        self._graph.add_edge(parent_id, node_id, choice_text=f"라운드 {round_number}")
+        self._graph.add_edge(parent_id, node_id, choice_text=t(lang, "combat_round_edge", n=round_number))
         return node_id
 
     def add_combat_result(self, result_summary: str, parent_id: str,
-                          outcome: str) -> str:
+                          outcome: str, lang: str = "ko") -> str:
         """전투 결과를 그래프 노드로 기록."""
-        outcome_text = {"victory": "승리", "defeat": "패배", "flee": "도주"}
-        title = f"전투 결과: {outcome_text.get(outcome, outcome)}"
+        outcome_text = {
+            "victory": t(lang, "result_victory"),
+            "defeat": t(lang, "result_defeat"),
+            "flee": t(lang, "result_flee"),
+        }
+        title = t(lang, "combat_result_title", outcome=outcome_text.get(outcome, outcome))
         node_id = f"{title}_{uuid.uuid4().hex[:6]}"
         self._graph.add_node(
             node_id,
@@ -69,7 +75,7 @@ class StoryGraph:
             description=result_summary,
             node_type="combat",
         )
-        self._graph.add_edge(parent_id, node_id, choice_text="전투 종료")
+        self._graph.add_edge(parent_id, node_id, choice_text=t(lang, "combat_end"))
         return node_id
 
     def add_future_choices(self, parent_id: str, choices: list[dict]):
@@ -154,12 +160,13 @@ class StoryGraph:
             })
         return summaries
 
-    def get_recent_combat_summary(self, count: int = 3) -> list[dict]:
+    def get_recent_combat_summary(self, count: int = 3, lang: str = "ko") -> list[dict]:
         """최근 N개 전투 결과 노드의 요약 (BFS 경로 기반)."""
+        result_prefix = t(lang, "combat_result_title", outcome="")
         combat_nodes = [
             n for n in self.get_path()
             if self._graph.nodes[n].get("node_type") == "combat"
-            and "전투 결과" in self._graph.nodes[n].get("title", "")
+            and result_prefix in self._graph.nodes[n].get("title", "")
         ]
         summaries = []
         for node_id in combat_nodes[-count:]:
@@ -182,7 +189,7 @@ class StoryGraph:
 
     # ── 엔딩용: 플레이 전체 요약 추출 ──
 
-    def extract_play_summary(self) -> dict:
+    def extract_play_summary(self, lang: str = "ko") -> dict:
         """스토리 그래프를 순회하여 플레이 전체 요약을 추출.
 
         엔딩 프롬프트에 주입하여 LLM이 플레이 내용을 반영한
@@ -205,6 +212,9 @@ class StoryGraph:
         combat_history = []
         mood_progression = []
 
+        result_prefix = t(lang, "combat_result_title", outcome="")
+        start_title = t(lang, "start_node")
+
         for i, node_id in enumerate(path):
             node = self._graph.nodes[node_id]
             node_type = node.get("node_type", "story")
@@ -217,7 +227,7 @@ class StoryGraph:
                 mood_progression.append(mood)
 
             # 전투 결과
-            if node_type == "combat" and "전투 결과" in title:
+            if node_type == "combat" and result_prefix in title:
                 combat_history.append(f"{title}: {desc[:100]}")
                 continue
 
@@ -226,7 +236,7 @@ class StoryGraph:
                 continue
 
             # 스토리 씬 요약
-            if node_type == "story" and title != "시작":
+            if node_type == "story" and title != start_title:
                 story_arc.append(f"[{title}] {desc[:120]}")
 
             # 이 노드로 진입한 선택지 (엣지 라벨)
@@ -235,7 +245,7 @@ class StoryGraph:
                 edge_data = self._graph.get_edge_data(prev_id, node_id)
                 if edge_data:
                     choice_text = edge_data.get("choice_text", "")
-                    if choice_text and choice_text not in ("이야기 진행", "전투 종료"):
+                    if choice_text and choice_text not in (t(lang, "story_progress"), t(lang, "combat_end")):
                         key_choices.append(choice_text)
 
         return {
@@ -247,9 +257,9 @@ class StoryGraph:
             "story_depth": self.get_story_depth(),
         }
 
-    def get_play_summary_for_prompt(self) -> str:
+    def get_play_summary_for_prompt(self, lang: str = "ko") -> str:
         """엔딩 프롬프트에 주입할 수 있는 플레이 요약 문자열."""
-        summary = self.extract_play_summary()
+        summary = self.extract_play_summary(lang=lang)
 
         lines = [f"### 플레이 기록 (총 {summary['total_scenes']}씬, 서사 깊이 {summary['story_depth']}) ###"]
 

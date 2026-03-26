@@ -1,3 +1,6 @@
+from worldweaver.i18n import t
+
+
 class WorldState:
     """테마 스키마 기반 동적 월드 스테이트.
 
@@ -5,13 +8,18 @@ class WorldState:
     gauges / entities / properties / collections를 동적으로 관리한다.
     """
 
-    def __init__(self, schema: dict):
+    def __init__(self, schema: dict, lang: str = "ko"):
         self._schema = schema
+        self._lang = lang
 
         # 엔티티 (캐릭터, NPC 등): {"메두사": "처치됨", "아테나": "동맹"}
         self.entities: dict[str, str] = {}
+        default_removed = ["처치됨", "소멸"]
+        # Include translated versions of the default removed statuses
+        translated = [t(lang, "entity_defeated")]
+        default_removed_all = list(set(default_removed + translated))
         self._removed_statuses: list[str] = (
-            schema.get("entities", {}).get("removed_statuses", ["처치됨", "소멸"])
+            schema.get("entities", {}).get("removed_statuses", default_removed_all)
         )
 
         # 게이지 (corruption, seal, health 등): {"corruption": 0.0, "seal": 0.0}

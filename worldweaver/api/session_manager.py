@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from worldweaver.chain import build_ending_chain, build_npc_dialogue_chain, build_story_chain
+from worldweaver.i18n import t
 from worldweaver.combat import CombatEngine, EnemyRegistry
 from worldweaver.item_graph import ItemGraph
 from worldweaver.ending import (
@@ -85,7 +86,8 @@ class WebGameSession:
         judgment_result = None
         if risky_choice:
             engine = JudgmentEngine(
-                self.world_state, self.graph, self.npc_manager, self.item_graph
+                self.world_state, self.graph, self.npc_manager, self.item_graph,
+                lang=self.language,
             )
             scene_context = ""
             recent = self.graph.get_recent_scenes_summary(1)
@@ -93,7 +95,7 @@ class WebGameSession:
                 scene_context = f"{recent[0]['title']} {recent[0]['description']}"
 
             judgment_result = engine.judge(risky_choice.get("text", ""), scene_context)
-            judgment_section = build_judgment_prompt_section(judgment_result)
+            judgment_section = build_judgment_prompt_section(judgment_result, lang=self.language)
 
             # 실패 시 health 감소 (서사 외적 패널티)
             if not judgment_result.success and "health" in self.world_state.gauges:
@@ -168,8 +170,8 @@ class WebGameSession:
 
         # 씬 처리
         self.scene_count += 1
-        choice_text = "이야기 진행"
-        parent_id = self.current_node_id or self.graph.add_start_node(prompt)
+        choice_text = t(self.language, "story_progress")
+        parent_id = self.current_node_id or self.graph.add_start_node(prompt, lang=self.language)
         self.current_node_id = self.graph.add_scene(node_data, parent_id, choice_text)
 
         # 스테이지 감지
@@ -226,16 +228,10 @@ class WebGameSession:
         stage_enemies = self.enemy_registry.get_enemies_at_stage(self.current_stage)
         self.active_enemies = [e.name for e in stage_enemies if e.name not in removed]
 
-        _combat_text = {
-            "ko": "⚔ {name}과(와) 전투",
-            "en": "⚔ Fight {name}",
-            "ja": "⚔ {name}と戦闘",
-        }
         for enemy_name in self.active_enemies:
-            fmt = _combat_text.get(self.language, _combat_text["en"])
             display_name = self.translator.tr(enemy_name, f"enemies.{enemy_name}.name")
             choices.append({
-                "text": fmt.format(name=display_name),
+                "text": t(self.language, "combat_choice", name=display_name),
                 "edge_feature": "Aggressive",
                 "next_node_prompt": f"Combat encounter with {enemy_name}",
                 "choice_type": "combat",
@@ -246,19 +242,13 @@ class WebGameSession:
         triggered = self.npc_manager.get_triggered_npcs(
             self.world_state, self.graph.get_depth()
         )
-        _npc_talk = {
-            "ko": "💬 {name}({role})과(와) 대화하기",
-            "en": "💬 Talk to {name} ({role})",
-            "ja": "💬 {name}（{role}）と話す",
-        }
         for npc, directive in triggered:
             existing = [c for c in choices if c.get("npc_name") == npc.profile.name]
             if not existing:
-                fmt = _npc_talk.get(self.language, _npc_talk["en"])
                 npc_display = self.translator.tr(npc.profile.name, f"npc.{npc.profile.name}.name")
                 role_display = self.translator.tr(npc.profile.role, f"npc.{npc.profile.name}.role")
                 choices.append({
-                    "text": fmt.format(name=npc_display, role=role_display),
+                    "text": t(self.language, "npc_talk", name=npc_display, role=role_display),
                     "edge_feature": "Diplomatic",
                     "next_node_prompt": directive,
                     "choice_type": "dialogue",
@@ -337,10 +327,10 @@ class WebGameSession:
         npc_name = self._resolve_npc_name(npc_name)
         npc = self.npc_manager.get_npc(npc_name)
         if not npc or not self.npc_dialogue_chain:
-            return {"error": f"NPC '{npc_name}' 또는 대화 체인 없음"}
+            return {"error": t(self.language, "npc_not_found", name=npc_name)}
 
         dialogue_history = npc.get_dialogue_history(self.current_stage)
-        history_text = "\n".join(m["content"] for m in dialogue_history) if dialogue_history else "(첫 대화)"
+        history_text = "\n".join(m["content"] for m in dialogue_history) if dialogue_history else t(self.language, "first_dialogue")
 
         # NPC가 먼저 말을 걸도록 player_input에 상황 설명을 넣음
         _greeting_prompt = {
@@ -375,11 +365,11 @@ class WebGameSession:
         # 호감도 동기화
         self.world_state.entities[npc.profile.name] = npc.disposition_label
 
-        t = self.translator
+        tr = self.translator
         return {
-            "npc_name": t.tr(npc.profile.name, f"npc.{npc.profile.name}.name"),
+            "npc_name": tr.tr(npc.profile.name, f"npc.{npc.profile.name}.name"),
             "npc_key": npc.profile.name,  # 원본 이름 (API 호출용)
-            "role": t.tr(npc.profile.role, f"npc.{npc.profile.name}.role"),
+            "role": tr.tr(npc.profile.role, f"npc.{npc.profile.name}.role"),
             "greeting": result["response"],
             "disposition": npc.disposition,
             "disposition_label": npc.disposition_label,
@@ -390,7 +380,7 @@ class WebGameSession:
         npc_name = self._resolve_npc_name(npc_name)
         npc = self.npc_manager.get_npc(npc_name)
         if not npc or not self.npc_dialogue_chain:
-            return {"error": f"NPC '{npc_name}' 또는 대화 체인 없음"}
+            return {"error": t(self.language, "npc_not_found", name=npc_name)}
 
         injections = detect_injection(player_input)
         if injections:
@@ -400,7 +390,7 @@ class WebGameSession:
         recovered = npc.recover_memory(player_input)
 
         dialogue_history = npc.get_dialogue_history(self.current_stage)
-        history_text = "\n".join(m["content"] for m in dialogue_history) if dialogue_history else "(첫 대화)"
+        history_text = "\n".join(m["content"] for m in dialogue_history) if dialogue_history else t(self.language, "first_dialogue")
 
         chain_input = {
             "npc_context": npc.to_prompt_context(),
@@ -469,11 +459,11 @@ class WebGameSession:
 
         # 전투 진입 노드
         combat_entry = {
-            "title": f"전투: {template.name}",
-            "description": f"{template.name}과(와)의 전투가 시작되었다. {template.description}",
+            "title": t(self.language, "combat_title", name=template.name),
+            "description": t(self.language, "combat_desc", name=template.name, desc=template.description),
         }
         self.combat_parent_id = self.graph.add_scene(
-            combat_entry, self.current_node_id, "전투 돌입", node_type="combat"
+            combat_entry, self.current_node_id, t(self.language, "combat_enter"), node_type="combat"
         )
 
         return {
@@ -495,7 +485,7 @@ class WebGameSession:
     def combat_action(self, action: str, item_name: str = "") -> dict:
         """전투 행동 실행."""
         if not self.active_combat:
-            return {"error": "활성 전투 없음"}
+            return {"error": t(self.language, "no_active_combat")}
 
         engine = self.active_combat
         result = engine.execute_round(action, item_name)
@@ -508,7 +498,8 @@ class WebGameSession:
 
         # 그래프 기록
         self.combat_parent_id = self.graph.add_combat_round(
-            result.combat_log, self.combat_parent_id, result.round_number
+            result.combat_log, self.combat_parent_id, result.round_number,
+            lang=self.language,
         )
 
         fled = action == "flee" and result.player_action.success
@@ -549,7 +540,7 @@ class WebGameSession:
 
         loot = []
         if outcome == "victory":
-            self.world_state.entities[template.name] = "처치됨"
+            self.world_state.entities[template.name] = t(self.language, "entity_defeated")
             if template.loot:
                 loot = list(template.loot)
                 combat_result.loot = loot
@@ -573,7 +564,8 @@ class WebGameSession:
 
         # 그래프 + 메모리
         result_id = self.graph.add_combat_result(
-            combat_result.to_graph_summary(), self.combat_parent_id, outcome
+            combat_result.to_graph_summary(), self.combat_parent_id, outcome,
+            lang=self.language,
         )
         self.memory.add_memory(sanitize_for_memory(combat_result.to_graph_summary()))
         self.npc_manager.record_scene_event(f"[전투] {combat_result.to_graph_summary()}", self.current_stage)
@@ -623,7 +615,7 @@ class WebGameSession:
         elif action == "refuse":
             return {"type": "refuse"}
         elif action == "attack":
-            self.world_state.entities[npc.profile.name] = "적대"
+            self.world_state.entities[npc.profile.name] = t(self.language, "entity_hostile")
             return {"type": "attack"}
         return None
 
@@ -700,7 +692,8 @@ class WebGameSession:
     def check_game_over(self) -> dict | None:
         """그래프 기반 게임오버 조건 체크."""
         evaluator = GameOverEvaluator(
-            self.theme, self.world_state, self.graph, self.npc_manager
+            self.theme, self.world_state, self.graph, self.npc_manager,
+            lang=self.language,
         )
         result = evaluator.evaluate()
         if not result:
@@ -714,21 +707,23 @@ class WebGameSession:
     def generate_game_over(self) -> dict:
         """게임오버 씬을 LLM으로 생성."""
         evaluator = GameOverEvaluator(
-            self.theme, self.world_state, self.graph, self.npc_manager
+            self.theme, self.world_state, self.graph, self.npc_manager,
+            lang=self.language,
         )
         game_over = evaluator.evaluate()
         if not game_over:
-            return {"error": "게임오버 조건 미충족"}
+            return {"error": t(self.language, "gameover_not_met")}
 
         context = build_game_over_prompt_context(
-            game_over, self.graph, self.world_state, self.npc_manager
+            game_over, self.graph, self.world_state, self.npc_manager,
+            lang=self.language,
         )
 
         ending_chain = build_ending_chain(self.language)
         try:
             result = ending_chain.invoke(context)
         except Exception as e:
-            return {"error": f"게임오버 씬 생성 실패: {e}"}
+            return {"error": t(self.language, "gameover_gen_fail")}
 
         return {
             "game_over_id": game_over.game_over_id,
@@ -790,7 +785,7 @@ class WebGameSession:
         각 스테이지의 상태(해금/방문/현재), 연결, NPC/적 정보를 포함.
         """
         stages = self.theme.get("stages", {})
-        t = self.translator
+        tr = self.translator
         removed = self.world_state.get_removed_entities()
 
         stage_list = []
@@ -802,14 +797,14 @@ class WebGameSession:
             # NPC 목록
             npcs_here = self.npc_manager.get_npcs_at_stage(name)
             npc_names = [
-                t.tr(n.profile.name, f"npc.{n.profile.name}.name")
+                tr.tr(n.profile.name, f"npc.{n.profile.name}.name")
                 for n in npcs_here
             ]
 
             # 미처치 적 목록
             stage_enemies = self.enemy_registry.get_enemies_at_stage(name)
             alive_enemies = [
-                t.tr(e.name, f"enemies.{e.name}.name")
+                tr.tr(e.name, f"enemies.{e.name}.name")
                 for e in stage_enemies if e.name not in removed
             ]
 
@@ -828,7 +823,7 @@ class WebGameSession:
 
             stage_list.append({
                 "name": name,
-                "display_name": t.tr(name, f"stages.{name}"),
+                "display_name": tr.tr(name, f"stages.{name}"),
                 "description": cfg.get("description", ""),
                 "layer": cfg.get("layer", 1),
                 "connects_to": cfg.get("connects_to", []),
@@ -849,16 +844,16 @@ class WebGameSession:
         """스테이지 이동. 해금 확인 후 이동 씬을 생성."""
         stages = self.theme.get("stages", {})
         if stage_name not in stages:
-            return {"error": f"존재하지 않는 스테이지: {stage_name}"}
+            return {"error": t(self.language, "stage_not_found", name=stage_name)}
 
         if not self._check_stage_unlock(stage_name):
-            return {"error": "해금 조건을 충족하지 않습니다"}
+            return {"error": t(self.language, "stage_locked")}
 
         # 현재 스테이지와 연결되어 있는지 확인
         current_cfg = stages.get(self.current_stage, {})
         connects = current_cfg.get("connects_to", [])
         if stage_name not in connects and stage_name != self.current_stage:
-            return {"error": "이 스테이지에서 직접 이동할 수 없습니다"}
+            return {"error": t(self.language, "stage_no_path")}
 
         old_stage = self.current_stage
         self.current_stage = stage_name
@@ -951,11 +946,12 @@ class WebGameSession:
         )
         ending = evaluator.evaluate()
         if not ending:
-            return {"error": "엔딩 조건을 충족하지 않습니다"}
+            return {"error": t(self.language, "ending_not_met")}
 
         # 엔딩 프롬프트 컨텍스트 구성
         context = build_ending_prompt_context(
-            ending, self.graph, self.world_state, self.npc_manager
+            ending, self.graph, self.world_state, self.npc_manager,
+            lang=self.language,
         )
 
         # 엔딩 체인 빌드 및 실행
@@ -963,7 +959,7 @@ class WebGameSession:
         try:
             result = ending_chain.invoke(context)
         except Exception as e:
-            return {"error": f"엔딩 생성 실패: {e}"}
+            return {"error": t(self.language, "ending_gen_fail")}
 
         return {
             "ending_id": ending.ending_id,
@@ -986,13 +982,13 @@ class WebGameSession:
           - lost: 엣지 모두 끊어짐 → NPC가 맥락을 완전히 잃음
           - completed: 수동 완료 처리됨
         """
-        t = self.translator
+        tr = self.translator
         quests = self.npc_manager.get_all_quests()
         return [
             {
                 "id": q["id"],
                 "content": q["content"],
-                "npc": t.tr(q["npc"], f"npc.{q['npc']}.name"),
+                "npc": tr.tr(q["npc"], f"npc.{q['npc']}.name"),
                 "npc_key": q["npc"],  # 원본 이름 (API 호출용)
                 "status": q["status"],
                 "stage": q.get("stage", ""),
@@ -1003,28 +999,28 @@ class WebGameSession:
 
     def _get_state_snapshot(self) -> dict:
         """현재 월드 스테이트 스냅샷 (라벨 번역 포함)."""
-        t = self.translator
+        tr = self.translator
         return {
             "gauges": dict(self.world_state.gauges),
             "entities": dict(self.world_state.entities),
             "properties": dict(self.world_state.properties),
             "collections": {k: list(v) for k, v in self.world_state.collections.items()},
             "gauge_labels": {
-                name: t.tr(
+                name: tr.tr(
                     self.world_state._gauge_schema[name].get("label", name),
                     f"gauges.{name}.label",
                 )
                 for name in self.world_state.gauges
             },
             "property_labels": {
-                name: t.tr(
+                name: tr.tr(
                     self.world_state._property_schema[name].get("label", name),
                     f"properties.{name}.label",
                 )
                 for name in self.world_state.properties
             },
             "collection_labels": {
-                name: t.tr(
+                name: tr.tr(
                     self.world_state._collection_schema[name].get("label", name),
                     f"collections.{name}.label",
                 )
@@ -1082,7 +1078,7 @@ class SessionManager:
             self._cleanup_expired()
 
             if len(self._sessions) >= self.MAX_SESSIONS:
-                raise RuntimeError("서버에 동시 접속자가 너무 많습니다. 잠시 후 다시 시도해주세요.")
+                raise RuntimeError(t(language, "err_rate_limit"))
 
         session_id = uuid.uuid4().hex[:12]
         theme = load_theme(theme_name)
@@ -1093,14 +1089,14 @@ class SessionManager:
         graph = StoryGraph()
 
         schema = theme.get("world_state_schema", {})
-        world_state = WorldState(schema)
+        world_state = WorldState(schema, lang=language)
         rule_engine = RuleEngine(world_state, graph, theme)
 
         npc_dialogue_chain = None
         if theme.get("npc_profiles"):
             npc_dialogue_chain = build_npc_dialogue_chain(language)
 
-        npc_manager = NPCManager(theme)
+        npc_manager = NPCManager(theme, lang=language)
         enemy_registry = EnemyRegistry(theme)
         item_graph = ItemGraph(theme)
         retriever = memory.as_retriever()
@@ -1137,7 +1133,7 @@ class SessionManager:
 
         # 시작 노드
         initial_prompt = theme["initial_prompt"]
-        session.current_node_id = graph.add_start_node(initial_prompt)
+        session.current_node_id = graph.add_start_node(initial_prompt, lang=language)
 
         self._sessions[session_id] = session
         self._session_ips[session_id] = client_ip
