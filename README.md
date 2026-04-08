@@ -78,7 +78,7 @@
 
 | 카테고리 | 기술 | 용도 |
 |----------|------|------|
-| **LLM** | Google Gemini 2.5-Flash | 스토리/대화/지식 그래프 생성 |
+| **LLM** | Google Gemini 3.1-Flash | 스토리/대화/지식 그래프 생성 |
 | **LLM 프레임워크** | LangChain (LCEL) | 파이프라인 오케스트레이션 |
 | **벡터 검색** | FAISS + GoogleGenerativeAIEmbeddings | RAG 세계관 검색 + 누적 기억 |
 | **백엔드** | FastAPI + Uvicorn | REST API + WebSocket |
