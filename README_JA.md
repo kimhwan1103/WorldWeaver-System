@@ -1,20 +1,27 @@
 # WorldWeaver
 
 [![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white)](https://python.org)
-[![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org)
+[![Node.js](https://img.shields.io/badge/Node.js-22-339933?logo=node.js&logoColor=white)](https://nodejs.org)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![LangChain](https://img.shields.io/badge/LangChain-0.3-1C3C3C?logo=langchain&logoColor=white)](https://langchain.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Email](https://img.shields.io/badge/Email-rlaghks1103%40gmail.com-EA4335?logo=gmail&logoColor=white)](mailto:rlaghks1103@gmail.com)
 
-> **[Demo](https://worldweaver-demo-production.up.railway.app)** | AI駆動インタラクティブストーリーエンジン — 世界観ドキュメントを入れるだけでWebブラウザで楽しめるテキストアドベンチャー
+> AI駆動インタラクティブストーリーエンジン — 世界観ドキュメントを入れるだけでWebブラウザで楽しめるテキストアドベンチャー
+>
+> 公開Webデモは現在停止中です。 [ゲーム画面を見る](docs/screenshots/gameplay.png)
 >
 > [한국어](README.md) | [English](README_EN.md) | **日本語**
 
 <p align="center">
   <img src="docs/screenshots/title.png" alt="WorldWeaver タイトル画面" width="720" />
 </p>
+
+## 主な実装
+
+- [NPCの記憶グラフ](worldweaver/npc_memory.py)：NPCごとに有向グラフで記憶を管理し、出来事と観察の記憶をステージごとに区分します。
+- [ストーリーのルールエンジン](worldweaver/rule_engine.py)：ゲームの状態とストーリーの履歴をもとに生成時の指示を組み立て、削除済みのエンティティの再登場など、定義したルールへの違反を確認します。
 
 ## なぜ作ったのか
 
@@ -30,7 +37,7 @@
 
 - 世界観ドキュメントフォルダを入れるだけで**知識グラフ抽出 → テーマJSON自動生成**により、コード修正なしで新しいゲームが作られ、
 - LLMが毎シーンごとに**世界観に合った多様な分岐を自動生成**し、プレイするたびに異なる展開を体験でき、
-- **知識グラフ + ルールエンジン + RAG + Pydanticスキーマ**でLLM出力の一貫性と定型性を構造的に保証します。
+- **知識グラフ、ルールエンジン、RAG、Pydanticスキーマ**を用いて生成に必要な文脈を与え、出力形式と定義したストーリーのルールを確認します。
 
 ```
 世界観ドキュメント → 知識グラフ抽出 → テーマJSON自動生成 → Webブラウザでプレイ
@@ -78,7 +85,7 @@
 
 | カテゴリ | 技術 | 用途 |
 |----------|------|------|
-| **LLM** | Google Gemini 2.5-Flash | ストーリー/会話/知識グラフ生成 |
+| **LLM** | Google Gemini (`gemini-3.1-flash-lite-preview`) | ストーリー/会話/知識グラフ生成 |
 | **LLMフレームワーク** | LangChain (LCEL) | パイプラインオーケストレーション |
 | **ベクトル検索** | FAISS + GoogleGenerativeAIEmbeddings | RAG世界観検索 + 累積記憶 |
 | **バックエンド** | FastAPI + Uvicorn | REST API + WebSocket |
@@ -198,13 +205,13 @@ WorldWeaver-System/
 ### 必須条件
 
 - Python 3.12+
-- Node.js 18+
+- Node.js 22（Dockerビルドで使用）
 - Google AI Studio APIキー ([発行リンク](https://aistudio.google.com/apikey))
 
 ### インストール
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/kimhwan1103/WorldWeaver-System.git
 cd WorldWeaver-System
 
 # バックエンドインストール
