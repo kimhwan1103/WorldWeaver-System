@@ -1,20 +1,27 @@
 # WorldWeaver
 
 [![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white)](https://python.org)
-[![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org)
+[![Node.js](https://img.shields.io/badge/Node.js-22-339933?logo=node.js&logoColor=white)](https://nodejs.org)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![LangChain](https://img.shields.io/badge/LangChain-0.3-1C3C3C?logo=langchain&logoColor=white)](https://langchain.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Email](https://img.shields.io/badge/Email-rlaghks1103%40gmail.com-EA4335?logo=gmail&logoColor=white)](mailto:rlaghks1103@gmail.com)
 
-> **[Demo](https://worldweaver-demo-production.up.railway.app)** | AI-powered interactive story engine — just drop in your worldbuilding documents and play a text adventure in your web browser
+> AI-powered interactive story engine — just drop in your worldbuilding documents and play a text adventure in your web browser
+>
+> The hosted web demo is currently paused. [View gameplay screenshots](docs/screenshots/gameplay.png)
 >
 > [한국어](README.md) | **English** | [日本語](README_JA.md)
 
 <p align="center">
   <img src="docs/screenshots/title.png" alt="WorldWeaver Title Screen" width="720" />
 </p>
+
+## Implementation highlights
+
+- [NPC memory graph](worldweaver/npc_memory.py): each NPC has a directed memory graph; event and observation memories are scoped by stage.
+- [Story rule engine](worldweaver/rule_engine.py): uses game state and story history to build generation directives and checks for defined violations, such as removed entities reappearing.
 
 ## Why We Built This
 
@@ -30,7 +37,7 @@ Text adventure games can deliver rich narratives, but the traditional approach h
 
 - Just drop in a worldbuilding document folder and **knowledge graph extraction + automatic theme JSON generation** creates a new game with zero code changes,
 - The LLM **automatically generates diverse lore-consistent branches every scene**, delivering a different experience each playthrough,
-- **Knowledge graph + rule engine + RAG + Pydantic schema** structurally guarantee consistency and structured output from the LLM.
+- A **knowledge graph, rule engine, RAG, and Pydantic schemas** supply context for generation and check output structure and defined story rules.
 
 ```
 Worldbuilding documents → Knowledge graph extraction → Automatic theme JSON generation → Play in your web browser
@@ -78,7 +85,7 @@ Worldbuilding documents → Knowledge graph extraction → Automatic theme JSON 
 
 | Category | Technology | Purpose |
 |----------|------------|---------|
-| **LLM** | Google Gemini 2.5-Flash | Story/dialogue/knowledge graph generation |
+| **LLM** | Google Gemini (`gemini-3.1-flash-lite-preview`) | Story/dialogue/knowledge graph generation |
 | **LLM Framework** | LangChain (LCEL) | Pipeline orchestration |
 | **Vector Search** | FAISS + GoogleGenerativeAIEmbeddings | RAG lore search + cumulative memory |
 | **Backend** | FastAPI + Uvicorn | REST API + WebSocket |
@@ -198,13 +205,13 @@ WorldWeaver-System/
 ### Prerequisites
 
 - Python 3.12+
-- Node.js 18+
+- Node.js 22 (used by the Docker build)
 - Google AI Studio API key ([Get one here](https://aistudio.google.com/apikey))
 
 ### Installation
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/kimhwan1103/WorldWeaver-System.git
 cd WorldWeaver-System
 
 # Backend installation
